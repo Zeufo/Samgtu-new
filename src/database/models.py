@@ -13,7 +13,13 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
-class User(DeclarativeBase):
+
+
+#DeclarativeBase in Alchemy 2.0+ is abc class, so we cant use it directly
+class Base(DeclarativeBase):
+    pass
+
+class User(Base):
     __tablename__ = "users"
 
     db_id:   Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)

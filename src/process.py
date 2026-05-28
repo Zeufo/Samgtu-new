@@ -2,7 +2,7 @@ from database import PostgresConnect, PostgresDBTablesCreation
 from parse import HTTPParser
 import aiohttp
 from config import SITE_LINK, ALL_GROUPS_LINK
-
+from loguru import logger
 
 #TO WHERE I PUT THE SESSION AIOHTTP?
 
@@ -17,11 +17,12 @@ class Process():
             await PostgresDBTablesCreation.create(pool)
 
             if first_start:
-                faculties = Parser.parse_faculties(SITE_LINK, session)
-                groups = Parser.parse_groups(ALL_GROUPS_LINK, session, faculties)
-                print(groups)
-           
-            
+                faculties = await Parser.parse_faculties(SITE_LINK, session)
+                logger.info(f"facult is {faculties} ")#-----------------------------------------------------------------------
+
+                groups = await Parser.parse_groups(ALL_GROUPS_LINK, session, faculties)
+                print(groups)#------------------------------------------------------------------------------------------------
+                pass
 
 
 

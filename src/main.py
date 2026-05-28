@@ -1,4 +1,3 @@
-from os import setuid
 from loguru import logger
 import sys
 from process import Process
@@ -13,8 +12,10 @@ def setup_logger() -> None:
 
     logger.add(
         sys.stderr, 
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        level="INFO"  # В консоль пишем только INFO и выше
+        format="<green>{time:HH:mm:ss}</green> | <level>{level: <6}</level> | {message}",
+        level="INFO",  # В консоль пишем только INFO и выше
+        backtrace=False,
+        diagnose=False
     )
 
     logger.add(
@@ -25,16 +26,19 @@ def setup_logger() -> None:
 
 
 
-
 async def main():
+
+    print("Main started!")
+
     setup_logger()
-    pool  = PostgresConnect.get_pool()
+    pool = await PostgresConnect.get_async_pool()
     MainProcess = Process()
     await MainProcess.preparation(pool, True)
 
 
 if __name__ == "__main__":
     try:
+        pass
         asyncio.run(main())
 
     except KeyboardInterrupt:

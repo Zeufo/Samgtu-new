@@ -10,7 +10,10 @@ wheels/
 .venv
 .env
 .env.*
+.log
+bot.log
 
 #files
 src/database/temp_copy.db
+logs/bot.log
 *.db
