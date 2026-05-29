@@ -11,7 +11,7 @@ DOTENV_PATH = SRC_DIR.parent /'.env'
 
 
 
-
+#SHOULD DELETE THIS IF NO USE
 class GroupsDictValues(Enum):
     ID = 0
     NAME = 1
@@ -30,9 +30,7 @@ try:
     PORT=os.getenv('DB_PORT')
 
 
-
-
-    BOT_TOKEN=os.getenv('BOT_TOKEN')
+    BOT_TOKEN=os.environ['BOT_TOKEN']
     ALL_GROUPS_LINK=os.getenv("GET_GROUPS_LINK")
     SITE_LINK=os.getenv("SITE_LINK")
 

@@ -1,5 +1,5 @@
-from database import PostgresConnect, PostgresDBTablesCreation
-from parse import HTTPParser
+from database import PostgreConnect, PostgreDBTablesCreation, PostgreFillTablesCreation
+from parse import HTTPGroupParser, HTTPFacultyParser
 import aiohttp
 from config import SITE_LINK, ALL_GROUPS_LINK
 from loguru import logger
@@ -7,22 +7,17 @@ from loguru import logger
 #TO WHERE I PUT THE SESSION AIOHTTP?
 
 class Process():
-    #def __init__(self, pool) -> None:
-        #connection = PostgresConnect()
-        #self.pool = pool #connection.get_pool()
-
     async def preparation(self, pool, first_start=False) -> None:
         async with aiohttp.ClientSession() as session:
-            Parser = HTTPParser()
-            await PostgresDBTablesCreation.create(pool)
+            await PostgreDBTablesCreation.create(pool)
 
             if first_start:
-                faculties = await Parser.parse_faculties(SITE_LINK, session)
-                logger.info(f"facult is {faculties} ")#-----------------------------------------------------------------------
+                faculties = await HTTPFacultyParser.parse(SITE_LINK, session)
 
-                groups = await Parser.parse_groups(ALL_GROUPS_LINK, session, faculties)
-                print(groups)#------------------------------------------------------------------------------------------------
-                pass
+                groups = await HTTPGroupParser.parse(ALL_GROUPS_LINK, session, faculties)
+                logger.info(f'groups is {groups}')
+                await PostgreFillTablesCreation.fill(pool, groups) 
+
 
 
 

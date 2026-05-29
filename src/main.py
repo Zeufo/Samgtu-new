@@ -1,44 +1,27 @@
-from loguru import logger
-import sys
+#from loguru import logger
+#import sys
 from process import Process
-from database import PostgresConnect
+from database import PostgreConnect
 import asyncio
-
-
-
-
-def setup_logger() -> None:
-    logger.remove()
-
-    logger.add(
-        sys.stderr, 
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <6}</level> | {message}",
-        level="INFO",  # В консоль пишем только INFO и выше
-        backtrace=False,
-        diagnose=False
-    )
-
-    logger.add(
-        'logs/bot.log',
-        rotation='25mb',
-        retention='10 days',
-        compression='zip',)
-
-
+from utils.logger import logger
+from aiogram import Bot, Dispatcher
+from config import BOT_TOKEN
 
 async def main():
+    bot = Bot(token=BOT_TOKEN)
+    dp = Dispatcher()
 
-    print("Main started!")
 
-    setup_logger()
-    pool = await PostgresConnect.get_async_pool()
+    logger.info("Main started!")
+    pool = await PostgreConnect.get_async_pool()
     MainProcess = Process()
     await MainProcess.preparation(pool, True)
+
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     try:
-        pass
         asyncio.run(main())
 
     except KeyboardInterrupt:

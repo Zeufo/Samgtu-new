@@ -1,4 +1,5 @@
-from .parse import HTTPParser
+from .parse import HTTPFacultyParser, HTTPGroupParser
+
 
 
 
