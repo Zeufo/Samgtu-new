@@ -30,7 +30,7 @@ try:
     PORT=os.getenv('DB_PORT')
 
 
-    BOT_TOKEN=os.environ['BOT_TOKEN']
+    BOT_TOKEN=os.environ['TEST_BOT_TOKEN']
     ALL_GROUPS_LINK=os.getenv("GET_GROUPS_LINK")
     SITE_LINK=os.getenv("SITE_LINK")
 

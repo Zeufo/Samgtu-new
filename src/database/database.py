@@ -1,6 +1,7 @@
 from array import typecodes
 import sqlite3
 import typing
+from aiogram import BaseMiddleware
 import aiosqlite
 import abc
 import psycopg
@@ -85,6 +86,8 @@ class PostgreConnect(DBConnect):
             min_size=4,
             max_size=10
         )
+        
+        logger.info('Succes connection')
 
         return pool
 
@@ -157,6 +160,32 @@ class PostgreFillTablesCreation(DBFillTable):
 
 
 
-    
+class AlchemyMiddleware(BaseMiddleware):
+    def __init__(self, session_factory):
+        self.session_factory = session_factory
 
-    
+    async def __call__(self, handler, event, data):
+        async with self.session_factory() as session:
+            data["session"] = session
+            return await handler(event, data)
+
+
+class AsyncpgMiddleware(BaseMiddleware):
+    def  __init__(self, pool):
+        self.pool = pool
+
+    async def __call__ (self, handler, event, data):
+        async with self.pool.acquire() as conn:
+            data["conn"] = conn
+            await handler(event, data)
+        
+
+
+
+
+
+
+
+
+
+

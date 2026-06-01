@@ -4,14 +4,22 @@ import aiohttp
 from config import SITE_LINK, ALL_GROUPS_LINK
 from loguru import logger
 
+
+#--------------from main-------------
+
+from aiogram import Bot, Dispatcher
+from config import BOT_TOKEN
+
+from handlers import get_main_router
+#--------------------------------------
 #TO WHERE I PUT THE SESSION AIOHTTP?
 
 class Process():
     async def preparation(self, pool, first_start=False) -> None:
-        async with aiohttp.ClientSession() as session:
-            await PostgreDBTablesCreation.create(pool)
+        if first_start:
+            async with aiohttp.ClientSession() as session:
+                await PostgreDBTablesCreation.create(pool)
 
-            if first_start:
                 faculties = await HTTPFacultyParser.parse(SITE_LINK, session)
 
                 groups = await HTTPGroupParser.parse(ALL_GROUPS_LINK, session, faculties)
