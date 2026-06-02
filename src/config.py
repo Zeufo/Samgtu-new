@@ -29,10 +29,10 @@ try:
     HOST=os.getenv('DB_HOST')
     PORT=os.getenv('DB_PORT')
 
-
+    PROXY_LINK =os.environ["PROXY_LINK"]
     BOT_TOKEN=os.environ['TEST_BOT_TOKEN']
     ALL_GROUPS_LINK=os.getenv("GET_GROUPS_LINK")
-    SITE_LINK=os.getenv("SITE_LINK")
+    SITE_LINK=os.environ["SITE_LINK"]
 
     DATABASE_URL = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
 

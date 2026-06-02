@@ -9,7 +9,7 @@ from config import BOT_TOKEN
 
 from handlers import get_main_router
 from database.models import AsyncSessionLocal
-from database import AlchemyMiddleware, AsyncpgMiddleware
+from database import AlchemyMiddleware
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
@@ -23,7 +23,6 @@ async def main():
 
     dp.include_router(get_main_router())
     dp.update.middleware(AlchemyMiddleware(session_factory=AsyncSessionLocal))
-    dp.update.middleware(AsyncpgMiddleware(pool))
 
     await dp.start_polling(bot)
 

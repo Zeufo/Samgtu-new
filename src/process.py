@@ -20,11 +20,11 @@ class Process():
             async with aiohttp.ClientSession() as session:
                 await PostgreDBTablesCreation.create(pool)
 
-                faculties = await HTTPFacultyParser.parse(SITE_LINK, session)
 
-                groups = await HTTPGroupParser.parse(ALL_GROUPS_LINK, session, faculties)
-                logger.info(f'groups is {groups}')
-                await PostgreFillTablesCreation.fill(pool, groups) 
+                if first_start:
+                    faculties = await HTTPFacultyParser.parse(SITE_LINK, session)
+                    groups = await HTTPGroupParser.parse(ALL_GROUPS_LINK, session, faculties)
+                    await PostgreFillTablesCreation.fill(pool, groups) 
 
 
 

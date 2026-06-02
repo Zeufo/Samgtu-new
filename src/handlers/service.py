@@ -1,32 +1,68 @@
 import asyncio
 from aiogram.types import Message
+from loguru import logger
+
 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types
 
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_
+from sqlalchemy.dialects.postgresql import insert
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import User
+from database import User, Group
 from database.models import AsyncSessionLocal
 allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СПО", "СТФ", "ТЭФ", "ФАД", "ФММТ", "ФПГС", "ХТФ", "ЭТФ"]
 
 
+#alchemy CRUD so it is
 class UserService():
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def add_user(self, user_id: int, course: int, faculty: str, group_id: int, last_time_acive: str) -> User:
-        new_user = User(user_id=user_id, course=course, faculty=faculty, group_id=group_id, last_time_acive=last_time_acive)
-        self.session.add(new_user)
+    async def add_user(self, user_id: int, course: int, faculty: str, group_id: int, last_time_active: str) -> User:
+        new_user = User(user_id=user_id, course=course, faculty=faculty, group_id=group_id, last_time_active=last_time_active)
+
+        stmt = insert(User).values(
+            user_id=user_id,
+            course=course,
+            faculty=faculty,
+            group_id=group_id,
+            last_time_active=last_time_active
+        )
+
+        #if user exist set this values at...
+        stmt = stmt.on_conflict_do_update(
+            index_elements=['user_id'],
+            set_={
+                'course': stmt.excluded.course,
+                'faculty': stmt.excluded.faculty,
+                'group_id': stmt.excluded.group_id,
+                'last_time_active': stmt.excluded.last_time_active
+            }
+        )
+
+        await self.session.execute(stmt)
         await self.session.commit()
-        await self.session.refresh(new_user)
 
         return new_user
 
-                  
+    async def read_user(self, user_id) -> User | None:
+        query = select(User).where(User.user_id == user_id)
 
+                  
+class GroupService():
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_id(self, group_name:str, course:int):
+        query = select(Group.group_id).where(and_(Group.group_name==group_name, Group.course==course))
+        result = await self.session.execute(query)
+
+        return result.scalar_one_or_none()
+        
 
 
 
@@ -45,7 +81,6 @@ async def welcome(message: Message, state: FSMContext) -> None:
         await state.set_state(RegistartionUser.waiting_for_faculty)
     except Exception:
         pass
-
 
 
 #here we need to add what to do  if doesnt worked
@@ -96,74 +131,68 @@ async def get_user_group_service(message: Message, state: FSMContext) -> None:
 
 
 
-
-async def write_user_service(message: Message, state: FSMContext, conn, session: AsyncSession) -> None:
+async def write_user_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
     try:
         text = message.text
-            
+        UserServ = UserService(session)
+        GroupServ = GroupService(session)
+        
+
         if text and text.upper() == "ДА":
             data = await state.get_data()  
+            faculty = str(data.get('faculty', 0))
+            course = int(data.get('course', 0))
 
-            faculty = data.get('faculty') 
 
             if faculty not in allowed_table:
-
                 await message.answer("Факультет не найден, доступные:")
-                await message.answer(str(allowed_table), reply_markup=ReplyKeyboardRemove())
+                #await message.answer(str(allowed_table), reply_markup=ReplyKeyboardRemove())
                 await message.answer("/start")
                 await state.clear()
 
 
-            if faculty and data.get('group') is not None:
-                group_name = (faculty + data.get('group_name'))
+            group_name = (faculty + data.get('group', 0))
 
-            else:
-                await message.answer("Ошибка в названии группы, попробуйте еще раз", reply_markup=ReplyKeyboardRemove())
-                await state.clear()
+            group_id = await GroupServ.get_id(group_name, course)
+        
+            if group_id is None:
+                await message.answer("Не найдена информация о группе, проверьте данные")
                 return
 
-#I dont think that we really need that check if user in the base. lets bettter solve it with upsert
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT user_id FROM users WHERE user_id = ?", (message.chat.id,)) 
-                user = await cur.fetchone() 
+            user = await UserServ.add_user(message.chat.id, course, faculty, group_id, 'Not now')#type: ignore
+            logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")#kjdsbngkjsdhfgkjsadhfgkhjsahdfhkjggsajhgfjhasdgfjhksadgfjhgasdjhfgjhakdsfgj
+            logger.info(f"logged succesfully with {user}")#kjdsbngkjsdhfgkjsadhfgkhjsahdfhkjggsajhgfjhasdgfjhksadgfjhgasdjhfgjhakdsfgj
+            await message.answer("Можете пользоваться ботом") 
 
-                await cur.execute(f"SELECT group_id FROM ({faculty}) WHERE group_name = ? AND course = ?", (group_name, data.get('course_name'),))
-                row = await cur.fetchone()
-                true_id = None
-
-            if row:
-                true_id = row[0]    
-
-
-            if true_id is not None :
-                if user is None:
-
-                    to_insert = [message.chat.id, data.get("course_name"), data.get("faculty_name"), true_id]  
-                    await cur.execute("INSERT INTO users (user_id, course, faculty, group_id) VALUES (?, ?, ?, ?)", to_insert)
-
-                else:
-                    await cur.execute("UPDATE users SET (user_id, course, faculty, group_id) = (?, ?, ?, ?) WHERE user_id = ?", (message.chat.id, data.get('course_name'), data.get('faculty_name'), true_id, message.chat.id,) )
-                
-
-                await cur.execute("INSERT OR IGNORE INTO all_groups(group_id) VALUES (?)", (true_id,))
-                await db_conn.commit()
-                await message.answer("Можете пользоваться ботом", reply_markup=base_kb.as_markup(resize_keyboard=True))
-                await state.clear()
-                return
-
-
-            await message.answer("Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove())
-            await message.answer('/start')
-
+        #await message.answer("Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove())
+        await message.answer('/start')
         await state.clear()
         return
 
     except Exception as e:
-        print(f"Problem with write in db... {e}")
+        logger.exception('Problem with registration', e)
+        await message.answer("Что-то пошло не так, попробуйте еще раз")
         await state.clear() 
 
 
 
+   
+
+
+
+
+
+async def schedule_this_week_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    pass
+
+async def schedule_next_week_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    pass
+
+async def schedule_this_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    pass
+
+async def schedule_next_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    pass
 
 
 
@@ -171,8 +200,3 @@ async def write_user_service(message: Message, state: FSMContext, conn, session:
 
 
 
-
-
-    except Exception:
-        pass
-    
