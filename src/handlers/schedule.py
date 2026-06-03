@@ -9,16 +9,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram import types
 
 from database.models import AsyncSessionLocal
-from handlers.service import RegistartionUser
-from handlers.service import get_user_faculty_service, get_user_group_service, write_user_service
-
+from services  import schedule_this_week_service
 
 router = Router(name=__name__)
 
 
 @router.message(F.text.upper().replace(' ', '') == "НАНЕДЕЛЮ")
-async def schedule_this_week(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
+async def schedule_this_week(message: Message, session: AsyncSession) -> None:
+    await schedule_this_week_service(message, session) 
 
 @router.message(F.text.upper().replace(' ', '') == "НАСЛЕД.НЕДЕЛЮ")
 async def schedule_next_week(message: Message, state: FSMContext, session: AsyncSession) -> None:

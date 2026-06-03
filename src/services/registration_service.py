@@ -14,10 +14,11 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import User, Group
 from database.models import AsyncSessionLocal
+
+
 allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СПО", "СТФ", "ТЭФ", "ФАД", "ФММТ", "ФПГС", "ХТФ", "ЭТФ"]
 
 
-#alchemy CRUD so it is
 class UserService():
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -49,20 +50,28 @@ class UserService():
 
         return new_user
 
-    async def read_user(self, user_id) -> User | None:
-        query = select(User).where(User.user_id == user_id)
+
+    async def get_user_group(self, user_id: int) -> int | None:
+        query = select(User.group_id).where(User.user_id==user_id)
+        result = await self.session.execute(query)
+        
+        return result.scalar_one_or_none()
+
+
+
 
                   
 class GroupService():
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_id(self, group_name:str, course:int):
+    async def get_id(self, group_name:str, course:int) -> int | None:
         query = select(Group.group_id).where(and_(Group.group_name==group_name, Group.course==course))
         result = await self.session.execute(query)
 
         return result.scalar_one_or_none()
         
+
 
 
 
@@ -177,23 +186,6 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
 
 
    
-
-
-
-
-
-async def schedule_this_week_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
-
-async def schedule_next_week_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
-
-async def schedule_this_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
-
-async def schedule_next_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
-
 
 
 

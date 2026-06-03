@@ -9,12 +9,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram import types
 
 from database.models import AsyncSessionLocal
-from handlers.service import RegistartionUser
-from handlers.service import get_user_faculty_service, get_user_group_service, write_user_service
-
+from services.registration_service import RegistartionUser, get_user_faculty_service, get_user_group_service, write_user_service
 
 router = Router(name=__name__)
-
 
 @router.message(RegistartionUser.waiting_for_faculty)
 async def get_user_faculty(message: Message, state: FSMContext) -> None:

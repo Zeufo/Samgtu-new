@@ -22,8 +22,8 @@ class Process():
 
 
                 if first_start:
-                    faculties = await HTTPFacultyParser.parse(SITE_LINK, session)
-                    groups = await HTTPGroupParser.parse(ALL_GROUPS_LINK, session, faculties)
+                    faculties = await HTTPFacultyParser.parse(session)
+                    groups = await HTTPGroupParser.parse(session, faculties)
                     await PostgreFillTablesCreation.fill(pool, groups) 
 
 

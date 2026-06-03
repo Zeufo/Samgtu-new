@@ -21,22 +21,31 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    db_id:   Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
-    course:  Mapped   [int] = mapped_column(nullable=False) 
-    faculty: Mapped   [str] = mapped_column(nullable=False)
-    group_id: Mapped  [int] = mapped_column(ForeignKey('all_groups.group_id'), nullable=False)
-    last_time_active: Mapped[str] = mapped_column()
+    db_id:            Mapped [int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id:          Mapped [int] = mapped_column(BigInteger, unique=True, nullable=False)
+    course:           Mapped [int] = mapped_column(nullable=False) 
+    faculty:          Mapped [str] = mapped_column(nullable=False)
+    group_id:         Mapped [int] = mapped_column(ForeignKey('all_groups.group_id'), nullable=False)
+    last_time_active: Mapped [str] = mapped_column()
 
 
-#class Schedule(Base):
-#    __tablename__ = ""
+class Schedule(Base):
+    __tablename__ = "schedule"
+
+    db_id:                Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
+    group_id:             Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
+    week_num:             Mapped   [int] = mapped_column(nullable=False)
+    schedule_json:        Mapped   [str] = mapped_column(nullable=False)
+    to_compare:           Mapped   [str] = mapped_column(nullable=False)
+    last_updated:         Mapped   [int] = mapped_column(nullable=False) 
+    to_compare_formated:  Mapped   [str] = mapped_column(nullable=False)
+
 
 class Group(Base):
     __tablename__ = "all_groups"
     
-    db_id:   Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
-    group_id: Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
-    group_name: Mapped   [str] = mapped_column(nullable=False)
-    faculty_id: Mapped  [int] = mapped_column(nullable=False)
-    course:  Mapped   [int] = mapped_column(nullable=False) 
+    db_id:       Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
+    group_id:    Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
+    group_name:  Mapped   [str] = mapped_column(nullable=False)
+    faculty_id:  Mapped   [int] = mapped_column(nullable=False)
+    course:      Mapped   [int] = mapped_column(nullable=False) 
