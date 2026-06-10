@@ -2,7 +2,7 @@ from sqlalchemy.sql.functions import grouping_sets
 from config import DBNAME, USER, PASSWORD, HOST, PORT
 
 from sqlalchemy import BigInteger, ForeignKey, Nullable, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedSQLExpression, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from config import DATABASE_URL
@@ -44,8 +44,12 @@ class Schedule(Base):
 class Group(Base):
     __tablename__ = "all_groups"
     
-    db_id:       Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
-    group_id:    Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
-    group_name:  Mapped   [str] = mapped_column(nullable=False)
-    faculty_id:  Mapped   [int] = mapped_column(nullable=False)
-    course:      Mapped   [int] = mapped_column(nullable=False) 
+    db_id:       Mapped   [int]  = mapped_column(primary_key=True, autoincrement=True)
+    group_id:    Mapped   [int]  = mapped_column(BigInteger, unique=True, nullable=False)
+    group_name:  Mapped   [str]  = mapped_column(nullable=False)
+    faculty_id:  Mapped   [int]  = mapped_column(nullable=False)
+    course:      Mapped   [int]  = mapped_column(nullable=False) 
+    in_use:      Mapped   [bool] = mapped_column(nullable=False)
+
+
+

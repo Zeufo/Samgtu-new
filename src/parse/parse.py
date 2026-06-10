@@ -25,68 +25,10 @@ class Parser(abc.ABC):
 
 
 
-
-
-def faculties_formatter(raw) -> list:
-
-    soup = bs4.BeautifulSoup(raw, "lxml")
-    faculties = soup.find("select", class_="schedule-selects")
-
-    if faculties:
-        faculties = faculties.find_all("option")
-    
-        faculties_id = []
-        for i in faculties:
-            key = i.get("value")#Тут разворачиваем где value=""
-
-            if key == "":
-                continue
-
-            faculties_id.append(key)#all faculties keys
-
-        return faculties_id
-
-    else:
-        raise RuntimeError
-    
+from parse.datacleaner import faculties_formatter, clean_schedule, parse_groups_formatter
 
 
 
-
-async def parse_groups_formatter():
-    groups_info = []
-    
-    async def add_groups_to_info(groups_from_faculty: list, course: int, faculty: int,  need_return=False):
-        nonlocal groups_info 
-        
-        if need_return == True:
-            return groups_info
-
-        for group in groups_from_faculty:
-
-
-            group['Name'] = group['Name'].rsplit(None, 1)[-1]
-            group['Name'] = group['Name'].replace("–", "")
-            group['Name'] = group['Name'][2:].upper()
-
-            if len(group["Name"]) < 5 or len(group["Name"].translate(str.maketrans('', '', '1234567890'))) < 2:
-                del group
-                continue
-            
-            if group['Name'] is None:
-                continue
-
-            group['course'] = course
-            #groups is list of dicts
-
-            del group['Sort']
-
-            to_insert = [group['ID'], group["Name"], faculty, group["course"]]
-
-            groups_info.append(to_insert)
-
-
-    return add_groups_to_info
 
 
 
@@ -144,112 +86,25 @@ class HTTPGroupParser(Parser):
 @typing.final
 class HTTPScheduleParser(Parser):
     @staticmethod
-    async def parse(session: aiohttp.ClientSession, grp_id: str, weeknum: int) -> None:
-        formated_link = SCHD_LINK.format(course=f'{grp_id}',  weeknumber=f'{weeknum}')
-        timeout = aiohttp.ClientTimeout(total=10)
-
-        async with session.get(formated_link, timeout=timeout) as response:
-            pass
-
-
-
-#Okay< here the funadmental func. it will request every 30 min schedule to the group from db 
-#so we need put in func week, grp_id or maybe take it from the data base
-#this func will work every 30 min or when user asks.
-async def clean_schedule(response):
-        raw_text = await response.text()
-
+    async def parse(session: aiohttp.ClientSession, grp_id: int | str, weeknum: int) -> list:
         try:
-            json_start = raw_text.find('{')
-            if json_start != -1:
-                clean_json_str = raw_text[json_start:]
-                data = json.loads(clean_json_str)
-            else:
-                return {}
-
-        except json.JSONDecodeError as e:
-            return {}
-
-        cleanr = re.compile('<.*?>')
-
-        def clean_text(text):
-            if not text: return ""
-            text = re.sub(cleanr, ' ', text)
-            text = text.replace('^', '')
-            text = text.replace('\xa0', ' ').strip()
-            return text
-        
-        days = data.get('wd', {})
-       
-        schedule = []
-        no_date_schedule = []
-
-        no_date_temp = {}
-        temp = {}
-
-        #day_id = 0
-
-        i = 0
-       
-        today = datetime.now(TZ_SAMARA)
-        start_of_week = today - timedelta(days=today.weekday())
+            if isinstance(grp_id, str):
+                grp_id = int(grp_id)
 
 
-        if is_next == True:
-            start_of_week = start_of_week + timedelta(days=7)
+            formated_link = SCHD_LINK.format(groupid=grp_id,  weeknumber=weeknum)
+            logger.warning(f"FORMATED LINK IS {formated_link}")#------------------------------------------------------------------
 
-        for day_id, day_data in days.items():
-            day_name = day_data.get("Name")
-            times = day_data.get('at', {})
-    
-            temp = {'day_name': day_name}
-            #lessons_info_temp = {}#-----------------------
+            timeout = aiohttp.ClientTimeout(total=10)
 
-            day = start_of_week + timedelta(days=i)        
-                    #week_day = day.strftime('%A')
+            async with session.get(formated_link, timeout=timeout) as response:
+                raw: list
+                raw = await clean_schedule(response)
+                return raw
 
-            date_name = day.strftime('%d %B')
-
-            temp['week_day'] = date_name,
-            temp['lessons'] = {}
-            no_date_temp['lessons'] = {}       
-                    
-
-            less = 1
-
-            for time_id, time_info in times.items():
-
-                cells = time_info.get("Cells", [])
-
-                if not cells:
-                    continue
-                
-
-                for cell in cells:
-                    time_name = clean_text(time_info.get("Name"))
-                    content = clean_text(cell.get('CellName', ''))
-                    week_type = cell.get("WeekTypeName", '')
-                   
-                    
-                    if content is not None:
-                        temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
-                        no_date_temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
-                    #lessons_info_temp[f'lesson {less}'] = content,
-                    #lessons_info_temp['time'] = time_name
-
-                    less = less + 1
-
-            i += 1
-
-            #temp[f'less_inf'] = lessons_info_temp
-
-            #print(f"temp now is... {temp}")
-            schedule.append(temp)
-            no_date_schedule.append(no_date_temp)
-        #print(f'sch to return... {schedule}')
-        return [schedule, no_date_schedule]
-
-
+        except Exception as e:
+            logger.error('Cant parse the schedule...', e)
+            raise RuntimeError
 
                     
 

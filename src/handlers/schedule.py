@@ -10,13 +10,16 @@ from aiogram import types
 
 from database.models import AsyncSessionLocal
 from services  import schedule_this_week_service
+from loguru import logger
+import aiohttp
 
 router = Router(name=__name__)
 
 
 @router.message(F.text.upper().replace(' ', '') == "НАНЕДЕЛЮ")
-async def schedule_this_week(message: Message, session: AsyncSession) -> None:
-    await schedule_this_week_service(message, session) 
+async def schedule_this_week(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession) -> None:
+    await schedule_this_week_service(message, session, http_session) 
+    logger.info("На неделю сработало")
 
 @router.message(F.text.upper().replace(' ', '') == "НАСЛЕД.НЕДЕЛЮ")
 async def schedule_next_week(message: Message, state: FSMContext, session: AsyncSession) -> None:

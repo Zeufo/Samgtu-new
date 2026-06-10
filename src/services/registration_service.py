@@ -12,7 +12,7 @@ from sqlalchemy import select, update, delete, and_
 from sqlalchemy.dialects.postgresql import insert
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import User, Group
+from database import User, Group, Schedule
 from database.models import AsyncSessionLocal
 
 
@@ -71,6 +71,13 @@ class GroupService():
 
         return result.scalar_one_or_none()
         
+
+        
+
+
+
+
+
 
 
 

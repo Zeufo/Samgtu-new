@@ -7,7 +7,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types
 
-from handlers.service import RegistartionUser, welcome
+from services import welcome
 
 
 
