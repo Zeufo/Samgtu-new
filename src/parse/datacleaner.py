@@ -81,17 +81,16 @@ async def clean_schedule(response):
         days = data.get('wd', {})
        
         schedule = []
-        no_date_schedule = []
-
-        no_date_temp = {}
+        #no_date_schedule = []
+        #no_date_temp = {}
         temp = {}
 
         #day_id = 0
 
         i = 0
        
-        today = datetime.now(TZ_SAMARA)
-        start_of_week = today - timedelta(days=today.weekday())
+        #today = datetime.now(TZ_SAMARA)
+        #start_of_week = today - timedelta(days=today.weekday())
 
 
         for day_id, day_data in days.items():
@@ -101,14 +100,14 @@ async def clean_schedule(response):
             temp = {'day_name': day_name}
             #lessons_info_temp = {}#-----------------------
 
-            day = start_of_week + timedelta(days=i)        
+            #day = start_of_week + timedelta(days=i)        
                     #week_day = day.strftime('%A')
 
-            date_name = day.strftime('%d %B')
+            #date_name = day.strftime('%d %B')
 
-            temp['week_day'] = date_name,
+            #temp['week_day'] = date_name,
             temp['lessons'] = {}
-            no_date_temp['lessons'] = {}       
+            #no_date_temp['lessons'] = {}       
                     
 
             less = 1
@@ -129,7 +128,7 @@ async def clean_schedule(response):
                     
                     if content is not None:
                         temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
-                        no_date_temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
+                        #no_date_temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
                     #lessons_info_temp[f'lesson {less}'] = content,
                     #lessons_info_temp['time'] = time_name
 
@@ -141,9 +140,11 @@ async def clean_schedule(response):
 
             #print(f"temp now is... {temp}")
             schedule.append(temp)
-            no_date_schedule.append(no_date_temp)
-        #print(f'sch to return... {schedule}')
-        return [schedule, no_date_schedule]
+            #no_date_schedule.append(no_date_temp)
+        #print(f'sch to return... {schedule}'i)
+
+        logger.info(f"schedule to return in the parser is... {schedule}")
+        return schedule
 
 
 

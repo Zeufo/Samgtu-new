@@ -9,7 +9,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram import types
 
 
-from sqlalchemy import select, update, delete, and_
+from pydantic_core.core_schema import to_string_ser_schema
+from sqlalchemy import JSON, select, true, update, delete, and_
 from sqlalchemy.dialects.postgresql import insert
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,9 +33,15 @@ import datetime
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import locale
+import typing
+import locale
+
 
 
 TZ_SAMARA = ZoneInfo('Europe/Samara')
+locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+
+
 
 
 
@@ -42,18 +49,22 @@ class ScheduleService():
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_schedule(self, week:int, group:int) -> str | None:
+    async def get_schedule(self, week:int, group:int) -> list[typing.Any] | None:
         query = select(Schedule.schedule_json).where(and_(Schedule.group_id==group, Schedule.week_num==week))
         result = await self.session.execute(query) 
 
         return result.scalar_one_or_none()
 
+
+    #to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:
-        stmt =  insert(Schedule).values(to_insert)
+        stmt =  insert(Schedule).values(group_id=to_insert[0], week_num=to_insert[1], schedule_json=to_insert[2], to_compare=to_insert[3], last_updated=to_insert[4], last_updated_formated=to_insert[5])
         await session.execute(stmt)
         await session.commit()
 
 
+#we use this to get normal keys from database. actually im not sure if we really need that, but legacy code didnt worked without it
+#so let is just be 
 async def output_formatter(raw) -> list | dict | None:
     if isinstance(raw, list):
         for day in raw:
@@ -70,24 +81,39 @@ async def output_formatter(raw) -> list | dict | None:
 
 icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 #wee need to activate parse_mode='HTML' in message.answer
+#I DONT UNDERTSTAND WHY WE USE CHECK TO IF LN < 2? SO I COMMENT It, MAybe one day well nedd thath
 async def message_maker(raw: list | dict) -> str:
     #print(f'schd is... \n{sА почему chd}\n\n\n')
 
     temp_msg = ''
     temp_msg = ''
     
+
     if isinstance(raw, dict):
         raw = [raw]
 
+    if isinstance(raw[0], list):
+        raw = raw[0]
+
+
     for day in  raw:
         ln = len(day['lessons'])
+        logger.info(f'day is {day}')
+
+
+        if ln < 2 and day['lessons'].get(1, {}).get('пара', 0) != 'Выходной': 
+            continue
+
+
 
         temp_msg += f'📅<b>{day['day_name']}</b>, '
-        temp_msg += f'{day['week_day'][0]}\n'
+        temp_msg += f'{day['week_day']}\n'
        
 
+
         for lesson in range(1, ln + 1):
-            temp_msg += f'\n{icons[lesson-1]}<b><code>{day['lessons'][lesson]['время']}</code></b>\n'
+            temp_msg += f'\n{icons[lesson-1]}\u200b<b><code>{day["lessons"][lesson]["время"]}</code></b>\n'
+            #temp_msg += f'\n{icons[lesson-1]}<b><code>{day['lessons'][lesson]['время']}</code></b>\n'
             ls_type = re.search(r'\((.*?)\)',  day['lessons'][lesson]['пара'])
             emoji ='📚'
 
@@ -116,51 +142,111 @@ async def message_maker(raw: list | dict) -> str:
 
 
 
+async def date_setter(no_date_schedule: list, is_next: bool) ->  None:
+    today = datetime.now(TZ_SAMARA)
+    start_of_week = today - timedelta(days=today.weekday())
 
-async def schedule_this_week_service(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession) -> None:
+    if is_next:
+        start_of_week += timedelta(days=7)
+
+    i = 0
+    for cell in no_date_schedule:
+
+        day = (start_of_week + timedelta(days=i))    
+        logger.info(f"day in date setter is... {day}")#---------------------------------
+        cell['week_day'] = day.strftime('%d %B')
+        i = i + 1
+
+
+
+
+
+#FIX how data is showed. should make cleaner forget that it works with tume and make it do in this func instead
+async def schedule_week_service(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession, is_next_week=False) -> list | dict | None:
     try:
         UserServ = UserService(session)
+
+        group_id = await UserServ.get_user_group(message.chat.id) 
+        
+        logger.info(f'Group id is \n\n\n\n{group_id}\n\n\n\n')
+        if group_id is None:
+            return None
+
         ScheduleServ = ScheduleService(session)
         GroupServ = GroupService(session)
 
-        group_id = await UserServ.get_user_group(message.chat.id) 
+        week = WeekState.week
+        time_now = datetime.now(TZ_SAMARA)
 
-        if group_id is None:
-            await message.answer("Пожалуйста, пройдите регистрацию/n/start")
-            return
+        if is_next_week == True:
+            week = WeekState.week + 1
 
 
-        msg = await output_formatter(await ScheduleServ.get_schedule(WeekState.week, group_id))
+        schd = await output_formatter(await ScheduleServ.get_schedule(week, group_id))
         
-        if msg is None:
-            logger.info(f'trying to parse with week {WeekState.week} amd group {group_id}')
-            msg = await HTTPScheduleParser.parse(http_session, group_id, WeekState.week)
-            schd = msg[0] 
-            #no_date_schd = msg[1]
+        if schd is None:
+            logger.info(f'trying to parse with week {week} amd group {group_id}')
+            schd = await HTTPScheduleParser.parse(http_session, group_id, week)
+            await date_setter(schd, is_next_week)
 
 
-            time_now = datetime.now(TZ_SAMARA)
+
             time_now_seconds = int(time_now.timestamp())
+            to_insert = (group_id, week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
+            logger.info(f"to insert is... \n\n{to_insert}\n\n")#--------------------------------------------------------------------
 
-            to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now)#type:ignore
 
             await ScheduleServ.insert_schedule(session, to_insert)
-            logger.info('New schedule was added')
+            logger.info('New schedule was added')#--------------------------------------------------------------------------------------
 
-
-        msg = await message_maker(msg)#type:ignore  it cant be none since we parcing
-        await message.answer(msg, parse_mode='HTML')
-        logger.info("giving schedule to the user...")
+        #msg = await message_maker(schd)#type:ignore  it cant be none since we parcing
+        return schd
 
     except Exception as e:
         logger.exception('Problem with sending schedule service...', e)
 
 
-async def schedule_next_week_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
+days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+async def schedule_day_service(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession, is_next_day=False) -> list | None | str:
+    try:
+        logger.info("Started the schedule service")#---------------------------------------------------------------------------
 
-async def schedule_this_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
-    pass
+        time_now = datetime.now(TZ_SAMARA)
+
+        if is_next_day:
+            time_now += timedelta(days=1)
+
+
+        if time_now.weekday() == 0:
+            schd = await schedule_week_service(message, session, http_session, True) 
+
+        else:
+            schd = await schedule_week_service(message, session, http_session) 
+
+
+
+        if schd is None:
+            logger.info("Schd is None... returning the list now")#---------------------------------------------------------------------------
+            return 'Выходной'
+
+        for day in schd:
+            if days[time_now.weekday()] in day.values():
+                if len(day.get('lessons', 0)) == 0:
+                    #'lessons': {1: {'пара': 'Физика (лекция)  ауд. 104 корпус №10', 'время': '8:00-9:35'}
+                    day['lessons'] = {1: {'пара': 'Выходной', 'время': 'Отсутствует'}}
+                    logger.info("len of day is none... returning the list now")#---------------------------------------------------------------------------
+                    return [day]
+                else:
+                    return[day]
+            
+
+
+
+    except Exception as e:
+        logger.exception('Problem with sending schedule service...', e)
+
+
+
 
 async def schedule_next_day_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
     pass

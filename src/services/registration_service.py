@@ -176,8 +176,8 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
                 return
 
             user = await UserServ.add_user(message.chat.id, course, faculty, group_id, 'Not now')#type: ignore
-            logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")#kjdsbngkjsdhfgkjsadhfgkhjsahdfhkjggsajhgfjhasdgfjhksadgfjhgasdjhfgjhakdsfgj
-            logger.info(f"logged succesfully with {user}")#kjdsbngkjsdhfgkjsadhfgkhjsahdfhkjggsajhgfjhasdgfjhksadgfjhgasdjhfgjhakdsfgj
+            logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")#-------------------------------------------------------------
+            logger.info(f"logged succesfully with {user}")#--------------------------------------------------------------------------------------
             await message.answer("Можете пользоваться ботом") 
 
         #await message.answer("Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove())

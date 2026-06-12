@@ -1,10 +1,10 @@
 from sqlalchemy.sql.functions import grouping_sets
 from config import DBNAME, USER, PASSWORD, HOST, PORT
 
-from sqlalchemy import BigInteger, ForeignKey, Nullable, String
+from sqlalchemy import BigInteger, ForeignKey, Nullable, String, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedSQLExpression, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
+import typing
 from config import DATABASE_URL
 
 
@@ -33,12 +33,12 @@ class Schedule(Base):
     __tablename__ = "schedule"
 
     db_id:                Mapped   [int] = mapped_column(primary_key=True, autoincrement=True)
-    group_id:             Mapped   [int] = mapped_column(BigInteger, unique=True, nullable=False)
+    group_id:             Mapped   [int] = mapped_column(nullable=False)
     week_num:             Mapped   [int] = mapped_column(nullable=False)
-    schedule_json:        Mapped   [str] = mapped_column(nullable=False)
+    schedule_json:        Mapped   [list[typing.Any]] = mapped_column(JSON, nullable=False)
     to_compare:           Mapped   [str] = mapped_column(nullable=False)
     last_updated:         Mapped   [int] = mapped_column(nullable=False) 
-    to_compare_formated:  Mapped   [str] = mapped_column(nullable=False)
+    last_updated_formated:  Mapped   [str] = mapped_column(nullable=False)
 
 
 class Group(Base):
