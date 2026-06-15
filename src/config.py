@@ -14,7 +14,7 @@ DOTENV_PATH = SRC_DIR.parent /'.env'
 
 @dataclass
 class WeekState():
-    week: int = 23
+    week: int = 0
 
 
 

@@ -13,6 +13,9 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
+async def close_db() -> None:
+    await engine.dispose()
+
 
 #DeclarativeBase in Alchemy 2.0+ is abc class, so we cant use it directly
 class Base(DeclarativeBase):

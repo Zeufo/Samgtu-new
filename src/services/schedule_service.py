@@ -141,18 +141,20 @@ async def message_maker(raw: list | dict) -> str:
     return temp_msg 
 
 
-
-async def date_setter(no_date_schedule: list, is_next: bool) ->  None:
-    today = datetime.now(TZ_SAMARA)
+#today here is time_now. i made it argument because dont like fact that we use time three times 
+async def date_setter(no_date_schedule: list, is_next: bool, today) ->  None:
+    #today = datetime.now(TZ_SAMARA)
     start_of_week = today - timedelta(days=today.weekday())
 
     if is_next:
         start_of_week += timedelta(days=7)
 
     i = 0
-    for cell in no_date_schedule:
 
+
+    for cell in no_date_schedule:
         day = (start_of_week + timedelta(days=i))    
+
         logger.info(f"day in date setter is... {day}")#---------------------------------
         cell['week_day'] = day.strftime('%d %B')
         i = i + 1
@@ -168,7 +170,8 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
 
         group_id = await UserServ.get_user_group(message.chat.id) 
         
-        logger.info(f'Group id is \n\n\n\n{group_id}\n\n\n\n')
+        logger.info(f'Group id is {group_id}')#-------------------------------------------------
+        
         if group_id is None:
             return None
 
@@ -187,13 +190,13 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
         if schd is None:
             logger.info(f'trying to parse with week {week} amd group {group_id}')
             schd = await HTTPScheduleParser.parse(http_session, group_id, week)
-            await date_setter(schd, is_next_week)
+            await date_setter(schd, is_next_week, time_now)
 
 
 
             time_now_seconds = int(time_now.timestamp())
             to_insert = (group_id, week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
-            logger.info(f"to insert is... \n\n{to_insert}\n\n")#--------------------------------------------------------------------
+            #logger.info(f"to insert is... \n\n{to_insert}\n\n")#--------------------------------------------------------------------
 
 
             await ScheduleServ.insert_schedule(session, to_insert)
@@ -214,14 +217,16 @@ async def schedule_day_service(message: Message, session: AsyncSession, http_ses
         time_now = datetime.now(TZ_SAMARA)
 
         if is_next_day:
+            logger.info(f'Time now before is... {time_now}')#-------------------------------------------------
             time_now += timedelta(days=1)
+            logger.info(f'Time now after is... {time_now}')#--------------------------------------------------
 
-
-        if time_now.weekday() == 0:
+        if time_now.weekday() == 0 and is_next_day:
+            logger.info('Starting with the next week status')#--------------------------------------------------
             schd = await schedule_week_service(message, session, http_session, True) 
 
         else:
-            schd = await schedule_week_service(message, session, http_session) 
+            schd = await schedule_week_service(message, session, http_session, False) 
 
 
 

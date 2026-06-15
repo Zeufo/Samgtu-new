@@ -2,7 +2,7 @@ import asyncio
 from aiogram.types import Message
 from loguru import logger
 
-
+from aiogram.types import ReplyKeyboardRemove
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types
@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import User, Group, Schedule
 from database.models import AsyncSessionLocal
+from keyboards import admit_decline_kb, schedule_kb
 
 
 allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СПО", "СТФ", "ТЭФ", "ФАД", "ФММТ", "ФПГС", "ХТФ", "ЭТФ"]
@@ -76,19 +77,13 @@ class GroupService():
 
 
 
-
-
-
-
-
-
 class RegistartionUser(StatesGroup):
     waiting_for_faculty  = State()
     waiting_for_course = State()
     waiting_for_group = State()
     write_in_base = State()
 
-
+#
 
 async def welcome(message: Message, state: FSMContext) -> None:
     try:
@@ -138,7 +133,7 @@ async def get_user_group_service(message: Message, state: FSMContext) -> None:
             data = await state.get_data()
 
             await message.answer(f"Ваш факультет {data.get("faculty")}, Курс {data.get("course")}, группа {raw_name}")    
-            #await message.answer("Все верно?", reply_markup = admit_decline_kb.as_markup(resize_keyboard=True))
+            await message.answer("Все верно?", reply_markup = admit_decline_kb.as_markup(resize_keyboard=True))
 
             await state.set_state(RegistartionUser.write_in_base)
 
@@ -147,6 +142,8 @@ async def get_user_group_service(message: Message, state: FSMContext) -> None:
 
 
 
+
+allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СПО", "СТФ", "ТЭФ", "ФАД", "ФММТ", "ФПГС", "ХТФ", "ЭТФ"]
 async def write_user_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
     try:
         text = message.text
@@ -162,7 +159,7 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
 
             if faculty not in allowed_table:
                 await message.answer("Факультет не найден, доступные:")
-                #await message.answer(str(allowed_table), reply_markup=ReplyKeyboardRemove())
+                await message.answer(str(allowed_table), reply_markup=ReplyKeyboardRemove())
                 await message.answer("/start")
                 await state.clear()
 
@@ -178,9 +175,13 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
             user = await UserServ.add_user(message.chat.id, course, faculty, group_id, 'Not now')#type: ignore
             logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")#-------------------------------------------------------------
             logger.info(f"logged succesfully with {user}")#--------------------------------------------------------------------------------------
-            await message.answer("Можете пользоваться ботом") 
+            await message.answer("Можете пользоваться ботом", reply_markup=schedule_kb.as_markup(resize_keyboard=True))
+            await state.clear()
+            return
 
-        #await message.answer("Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove())
+
+        logger.info("SOMEHOW RETURN DIDNT WORKED")#-----------------------------------------------------------
+        await message.answer("Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove())
         await message.answer('/start')
         await state.clear()
         return
@@ -188,7 +189,8 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
     except Exception as e:
         logger.exception('Problem with registration', e)
         await message.answer("Что-то пошло не так, попробуйте еще раз")
-        await state.clear() 
+        await state.clear()
+        return
 
 
 

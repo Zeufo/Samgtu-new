@@ -11,29 +11,34 @@ from aiogram import types
 from database.models import AsyncSessionLocal
 from services import schedule_week_service, schedule_day_service, message_maker
 from loguru import logger
+from keyboards import schedule_kb, admit_decline_kb
+
 import aiohttp
 
 router = Router(name=__name__)
 
-
 async def make_and_send(message: Message, to_transform):
-    logger.info("Now in make and send")#---------------------------------------------------------------------------
+    logger.debug("Now in make and send")#---------------------------------------------------------------------------
 
     if to_transform is None:
         await message.answer("Пожалуйста, пройдите регистрацию")
         await message.answer("/start")
         return 
 
-    logger.info("Now in make and send check passed")#---------------------------------------------------------------------------
+    logger.debug("Now in make and send check passed")#---------------------------------------------------------------------------
     to_send = await message_maker(to_transform)#type:ignore
-    await message.answer(to_send, parse_mode='HTML')#type:ignore
 
+    if len(to_send) == 0:
+        await message.answer('Похоже, пары на указанной неделе отсутствуют')#type:ignore
+        return
+
+    await message.answer(to_send, parse_mode='HTML')#type:ignore
 
 
 
 @router.message(F.text.upper().replace(' ', '') == "НАНЕДЕЛЮ")
 async def schedule_this_week(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession) -> None:
-    raw_msg = await schedule_week_service(message, session, http_session, True) 
+    raw_msg = await schedule_week_service(message, session, http_session, False) 
     await make_and_send(message, raw_msg)
     logger.info("На след. неделю сработало")
 
@@ -49,13 +54,12 @@ async def schedule_next_week(message: Message, session: AsyncSession, http_sessi
 
 @router.message(F.text.upper().replace(' ', '') == "НАСЕГОДНЯ")
 async def schedule_this_day(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession) -> None:
-    raw_msg = await schedule_day_service(message, session, http_session)
+    raw_msg = await schedule_day_service(message, session, http_session, False)
     await make_and_send(message, raw_msg)
     logger.info("На сегодня")
 
 @router.message(F.text.upper().replace(' ', '') == "НАЗАВТРА")
 async def schedule_next_day(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession) -> None:
     raw_msg = await schedule_day_service(message, session, http_session, True)
-    logger.info(f'raw message for tommorow is {raw_msg}')#-----------------------------------------------------------------------
     await make_and_send(message, raw_msg)
-    logger.info("На сегодня")
+    logger.info("На завтра")
