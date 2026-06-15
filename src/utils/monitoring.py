@@ -36,28 +36,25 @@ async def week_changes_monitoring(http_session: aiohttp.ClientSession) -> None:
 
 
 
+
+
 async def changes_monitoring(http_session: aiohttp.ClientSession, session: AsyncSession) -> None:
     local_week = int(str(week))
     is_next_week = False
+    ScheduleServ = ScheduleService(session)
+    week = WeekState.week
 
     while True:
         try:
+            week = WeekState.week
+            week:int 
             lc_gl_week = int(str(week))
 
-            await cur.execute("SELECT group_id FROM schedules WHERE week_num = ?", (local_week,))
-            rows = await cur.fetchall()
+            rows = await ScheduleServ.get_groups_id(week)
         
             if rows:
                 for row in rows:
-                    schd = await get_schedule(row[0], local_week, session, is_next_week)
-                    
-
-                    if isinstance(schd, dict):
-                        schd = [schd]
-
-                    else:
-                        if isinstance(schd[0], list):
-                            schd = schd[0]
+                    schd = await ScheduleServ.get_schedule(week, row)#TODO: know what get_schedule return and how we use it. i dont get it. is it tuple?
 
                     schd = json.dumps(schd, ensure_ascii=False)#already string 
 

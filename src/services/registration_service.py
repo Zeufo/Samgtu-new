@@ -66,11 +66,13 @@ class GroupService():
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_id(self, group_name:str, course:int) -> int | None:
+    async def get_id(self, group_name:str, course:int) -> int | None:#for registration
         query = select(Group.group_id).where(and_(Group.group_name==group_name, Group.course==course))
         result = await self.session.execute(query)
 
         return result.scalar_one_or_none()
+
+
         
 
         

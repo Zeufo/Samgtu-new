@@ -6,7 +6,7 @@ import re
 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram import types
+from aiogram import session, types
 
 
 from pydantic_core.core_schema import to_string_ser_schema
@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import orm_insert_sentinel
+from sqlalchemy import Result
 from database import User, Group
 from database.models import AsyncSessionLocal
 
@@ -58,10 +59,17 @@ class ScheduleService():
 
     #to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:
-        stmt =  insert(Schedule).values(group_id=to_insert[0], week_num=to_insert[1], schedule_json=to_insert[2], to_compare=to_insert[3], last_updated=to_insert[4], last_updated_formated=to_insert[5])
+        stmt =  insert(Schedule).values(group_шid=to_insert[0], week_num=to_insert[1], schedule_json=to_insert[2], to_compare=to_insert[3], last_updated=to_insert[4], last_updated_formated=to_insert[5])
         await session.execute(stmt)
         await session.commit()
 
+    
+    #this operation will be use in monitoring service so we ttake session from init
+    async def get_groups_id(self, week: int):# -> list |Result i guess
+        query = select(Schedule.group_id).where(Schedule.week_num==week)
+        result = await self.session.execute(query)
+
+        return result.all()
 
 #we use this to get normal keys from database. actually im not sure if we really need that, but legacy code didnt worked without it
 #so let is just be 
@@ -131,8 +139,18 @@ async def message_maker(raw: list | dict) -> str:
             
 
             ln = len(parts)
-            if ln < 2:
+
+
+            if ln < 2 and day['lessons'].get(1, {}).get('пара', 0) == 'Выходной': 
+                parts.append('\tДиван')
+
+            elif ln < 2:
                 parts.append('\tне указана')
+
+
+
+
+
             temp_msg += f"{emoji}{parts[0].strip()}\n📍ауд.{parts[1]}\n"
         
         temp_msg += '\n'
@@ -170,7 +188,7 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
 
         group_id = await UserServ.get_user_group(message.chat.id) 
         
-        logger.info(f'Group id is {group_id}')#-------------------------------------------------
+        logger.debug(f'Group id is {group_id}')
         
         if group_id is None:
             return None
@@ -190,6 +208,8 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
         if schd is None:
             logger.info(f'trying to parse with week {week} amd group {group_id}')
             schd = await HTTPScheduleParser.parse(http_session, group_id, week)
+            logger.debug(f'schedule just after parse... {schd}')
+
             await date_setter(schd, is_next_week, time_now)
 
 
@@ -200,7 +220,7 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
 
 
             await ScheduleServ.insert_schedule(session, to_insert)
-            logger.info('New schedule was added')#--------------------------------------------------------------------------------------
+            logger.info(f'New schedule was added for {group_id} with {week} week')
 
         #msg = await message_maker(schd)#type:ignore  it cant be none since we parcing
         return schd

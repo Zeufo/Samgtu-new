@@ -15,7 +15,7 @@ def setup_logger() -> None:
     logger.add(
         sys.stderr, 
         format=console_format,
-        level="INFO",          
+        level="DEBUG",          
         backtrace=True,
         diagnose=True
     )
@@ -29,7 +29,7 @@ def setup_logger() -> None:
     logger.add(
         'logs/bot.log',
         format=file_format,
-        level="DEBUG",         
+        level="INFO",         
         rotation='25 MB',   
         retention='10 days',
         compression='zip',
