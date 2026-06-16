@@ -31,22 +31,24 @@ import json
 import re
 import datetime
 
+
+
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import locale
 import typing
 import locale
-
-
-
-TZ_SAMARA = ZoneInfo('Europe/Samara')
-locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+from config import TZ_SAMARA
 
 
 
 
 
-class ScheduleService():
+
+
+
+
+class ScheduleService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -57,19 +59,42 @@ class ScheduleService():
         return result.scalar_one_or_none()
 
 
+
+    async def get_schedule_and_hash(self, week:int, group:int) -> list[typing.Any] | None | typing.Any:
+        query = select(Schedule.schedule_json, Schedule.hash).where(and_(Schedule.group_id==group, Schedule.week_num==week))
+        result = await self.session.execute(query) 
+        return result.all()
+
+
     #to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:
-        stmt =  insert(Schedule).values(group_шid=to_insert[0], week_num=to_insert[1], schedule_json=to_insert[2], to_compare=to_insert[3], last_updated=to_insert[4], last_updated_formated=to_insert[5])
+        stmt =  insert(Schedule).values(group_id=to_insert[0], week_num=to_insert[1], schedule_json=to_insert[2], hash=to_insert[3], last_updated=to_insert[4], last_updated_formated=to_insert[5])
         await session.execute(stmt)
         await session.commit()
 
-    
+
+    async def update_schedule_for_monitoring(self, group_id: int, to_update: dict) -> None:
+
+        stmt = (
+            update(Schedule)
+            .where(Schedule.group_id==group_id)
+            .values(**to_update)
+            .execution_options(synchronize_session='fetch')
+        )
+
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+
     #this operation will be use in monitoring service so we ttake session from init
     async def get_groups_id(self, week: int):# -> list |Result i guess
         query = select(Schedule.group_id).where(Schedule.week_num==week)
         result = await self.session.execute(query)
 
         return result.all()
+
+
+
 
 #we use this to get normal keys from database. actually im not sure if we really need that, but legacy code didnt worked without it
 #so let is just be 
@@ -184,6 +209,7 @@ async def date_setter(no_date_schedule: list, is_next: bool, today) ->  None:
 #FIX how data is showed. should make cleaner forget that it works with tume and make it do in this func instead
 async def schedule_week_service(message: Message, session: AsyncSession, http_session: aiohttp.ClientSession, is_next_week=False) -> list | dict | None:
     try:
+        from utils import schedule_hash
         UserServ = UserService(session)
 
         group_id = await UserServ.get_user_group(message.chat.id) 
@@ -215,7 +241,9 @@ async def schedule_week_service(message: Message, session: AsyncSession, http_se
 
 
             time_now_seconds = int(time_now.timestamp())
-            to_insert = (group_id, week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
+            hash = schedule_hash(schd)
+
+            to_insert = (group_id, week, schd, hash, time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
             #logger.info(f"to insert is... \n\n{to_insert}\n\n")#--------------------------------------------------------------------
 
 

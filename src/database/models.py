@@ -39,7 +39,7 @@ class Schedule(Base):
     group_id:             Mapped   [int] = mapped_column(nullable=False)
     week_num:             Mapped   [int] = mapped_column(nullable=False)
     schedule_json:        Mapped   [list[typing.Any]] = mapped_column(JSON, nullable=False)
-    to_compare:           Mapped   [str] = mapped_column(nullable=False)
+    hash:           Mapped   [str] = mapped_column(nullable=False)
     last_updated:         Mapped   [int] = mapped_column(nullable=False) 
     last_updated_formated:  Mapped   [str] = mapped_column(nullable=False)
 

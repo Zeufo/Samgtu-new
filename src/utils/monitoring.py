@@ -9,12 +9,19 @@ from zoneinfo import ZoneInfo
 import locale
 from typing import Optional
 import aiohttp
+from psycopg.errors import SchemaAndDataStatementMixingNotSupported
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import PROXY_LINK, SITE_LINK
+
 from loguru import logger
-from config import WeekState
 import bs4
 from services import ScheduleService 
+from config import WeekState
+from config import PROXY_LINK, SITE_LINK
+import json
+from config import TZ_SAMARA
+
+import hashlib
+
 
 
 
@@ -37,42 +44,71 @@ async def week_changes_monitoring(http_session: aiohttp.ClientSession) -> None:
 
 
 
+def schedule_hash(schedule: list) -> str:
+    raw = json.dumps(schedule, sort_keys=True, ensure_ascii=False)
+    return hashlib.md5(raw.encode('utf-8')).hexdigest()
 
-async def changes_monitoring(http_session: aiohttp.ClientSession, session: AsyncSession) -> None:
-    local_week = int(str(week))
+
+async def changes_monitoring(http_session: aiohttp.ClientSession, session_maker) -> None:
+    await asyncio.sleep(10)
+
+    local_week = int(WeekState.week)
     is_next_week = False
-    ScheduleServ = ScheduleService(session)
-    week = WeekState.week
+    async with session_maker() as session:
 
-    while True:
-        try:
-            week = WeekState.week
-            week:int 
-            lc_gl_week = int(str(week))
+        ScheduleServ = ScheduleService(session)
+        week = WeekState.week
 
-            rows = await ScheduleServ.get_groups_id(week)
-        
-            if rows:
-                for row in rows:
-                    schd = await ScheduleServ.get_schedule(week, row)#TODO: know what get_schedule return and how we use it. i dont get it. is it tuple?
+        while True:
+            try:
+                week = WeekState.week
+                week:int 
+                lc_gl_week = int(str(week))
 
-                    schd = json.dumps(schd, ensure_ascii=False)#already string 
+                rows = await ScheduleServ.get_groups_id(week)#[(id1, id2, id3)]
 
-                    now = datetime.now(TZ_SAMARA)
-                    await cur.execute("UPDATE schedules SET(schedule_json, last_updated_user) = (?, ?) WHERE group_id = ? AND week_num = ?", (schd, now.strftime('%d %B %H:%M'), row[0], local_week))
-                    await asyncio.sleep(10)
-
-            if local_week == lc_gl_week:
-                local_week = local_week + 1
-                is_next_week = True
-            else:
-                local_week = lc_gl_week
-                is_next_week = False
+                logger.debug(f'rows is... {rows}')
             
-            await db_conn.commit()
-            await asyncio.sleep(1800)#1800
-        except Exception as e:
-            await asyncio.sleep(60)#60
-            traceback.print_exc()
+                if rows:
+                    for row in rows[0]:#row here is group id
+                        data = await ScheduleServ.get_schedule_and_hash(week, row)# [( [{}], 'str')]
+                        schd = data[0][0]#type:ignore
+                        hash = data[0][1]#type:ignore
 
-        await asyncio.sleep(10)
+                        if schd is None or hash is None:
+                            logger.warning(f'SCHEDULE IS NONE FOR {row} AT {week}... WHY?\t with schd {schd}\n\n and{hash}')
+                            continue
+                                
+                        now = datetime.now(TZ_SAMARA)
+
+                        new_hash = schedule_hash(schd)
+                        if new_hash == hash:
+                            update = {'last_updated_formated': now.strftime('%d %B %H:%M')}
+                            await ScheduleServ.update_schedule_for_monitoring(row, update)
+                            return
+
+                        else:
+                            logger.critical("justt cheking if hash working now. no need for panic")
+
+                        return 
+
+
+                        await cur.execute("UPDATE schedules SET(schedule_json, last_updated_user) = (?, ?) WHERE group_id = ? AND week_num = ?", (schd, now.strftime('%d %B %H:%M'), row[0], local_week))
+                        await asyncio.sleep(10)
+
+                if local_week == lc_gl_week:
+                    local_week = local_week + 1
+                    is_next_week = True
+                else:
+                    local_week = lc_gl_week
+                    is_next_week = False
+                
+                #await db_conn.commit()
+                #await asyncio.sleep(1800)#1800
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as e:
+                await asyncio.sleep(60)#60
+
+            await asyncio.sleep(10)

@@ -5,6 +5,7 @@ from pathlib import Path
 from loguru import logger
 from enum import Enum
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
 
 
 CURRENT_FILE_PATH = Path(__file__).resolve()
@@ -18,6 +19,7 @@ class WeekState():
 
 
 
+TZ_SAMARA = ZoneInfo('Europe/Samara')
 
 
 

@@ -12,6 +12,15 @@ from handlers import get_main_router
 from database import AsyncSessionLocal
 from database import AlchemyMiddleware
 import aiohttp
+from utils import changes_monitoring
+import locale
+
+
+
+
+
+locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
@@ -33,8 +42,24 @@ async def main():
 
     async with aiohttp.ClientSession() as httpsession:
         dp["http_session"] = httpsession
+           
+        try:
+            task1 = asyncio.create_task(dp.start_polling(bot))
+            task2 = asyncio.create_task(changes_monitoring(httpsession, AsyncSessionLocal))
+            await asyncio.gather(task1, task2)
 
-        await dp.start_polling(bot)
+        except asyncio.CancelledError:
+            logger.info("Stop signal recived")
+            raise
+
+        finally:
+            task1.cancel()#type:ignore
+            task2.cancel()#type:ignore
+
+            await asyncio.gather(task1,task2, return_exceptions=True)#type:ignore
+            logger.info('Tasks are closed')
+
+
 
 if __name__ == "__main__":
     try:
