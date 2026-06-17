@@ -1,84 +1,20 @@
-import asyncio
 from aiogram.types import Message
 from loguru import logger
 
 from aiogram.types import ReplyKeyboardRemove
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram import types
-
-
-from sqlalchemy import select, update, delete, and_
-from sqlalchemy.dialects.postgresql import insert
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import User, Group, Schedule
-from database.models import AsyncSessionLocal
 from keyboards import admit_decline_kb, schedule_kb
+from services import GroupService, UserService
+
 
 
 allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СПО", "СТФ", "ТЭФ", "ФАД", "ФММТ", "ФПГС", "ХТФ", "ЭТФ"]
 
 
-class UserService():
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def add_user(self, user_id: int, course: int, faculty: str, group_id: int, last_time_active: str) -> User:
-        new_user = User(user_id=user_id, course=course, faculty=faculty, group_id=group_id, last_time_active=last_time_active)
-
-        stmt = insert(User).values(
-            user_id=user_id,
-            course=course,
-            faculty=faculty,
-            group_id=group_id,
-            last_time_active=last_time_active
-        )
-
-        #if user exist set this values at...
-        stmt = stmt.on_conflict_do_update(
-            index_elements=['user_id'],
-            set_={
-                'course': stmt.excluded.course,
-                'faculty': stmt.excluded.faculty,
-                'group_id': stmt.excluded.group_id,
-                'last_time_active': stmt.excluded.last_time_active
-            }
-        )
-
-        await self.session.execute(stmt)
-        await self.session.commit()
-
-        return new_user
-
-
-    async def get_user_group(self, user_id: int) -> int | None:
-        query = select(User.group_id).where(User.user_id==user_id)
-        result = await self.session.execute(query)
         
-        return result.scalar_one_or_none()
-
-
-
-
-                  
-class GroupService():
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get_id(self, group_name:str, course:int) -> int | None:#for registration
-        query = select(Group.group_id).where(and_(Group.group_name==group_name, Group.course==course))
-        result = await self.session.execute(query)
-
-        return result.scalar_one_or_none()
-
-
-        
-
-        
-
-
-
 class RegistartionUser(StatesGroup):
     waiting_for_faculty  = State()
     waiting_for_course = State()
@@ -149,8 +85,8 @@ allowed_table = ['ИАИТ', 'ВБШ', "ИИЭГО", "ИНГТ", "ИТФ", "СП
 async def write_user_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
     try:
         text = message.text
-        UserServ = UserService(session)
-        GroupServ = GroupService(session)
+        user_service = UserService(session)
+        group_service = GroupService(session)
         
 
         if text and text.upper() == "ДА":
@@ -168,13 +104,13 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
 
             group_name = (faculty + data.get('group', 0))
 
-            group_id = await GroupServ.get_id(group_name, course)
+            group_id = await group_service.get_id(group_name, course)
         
             if group_id is None:
                 await message.answer("Не найдена информация о группе, проверьте данные")
                 return
 
-            user = await UserServ.add_user(message.chat.id, course, faculty, group_id, 'Not now')#type: ignore
+            user = await user_service.add_user(message.chat.id, course, faculty, group_id, 'Not now')#type: ignore
             logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")#-------------------------------------------------------------
             logger.info(f"logged succesfully with {user}")#--------------------------------------------------------------------------------------
             await message.answer("Можете пользоваться ботом", reply_markup=schedule_kb.as_markup(resize_keyboard=True))

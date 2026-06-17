@@ -39,8 +39,10 @@ def faculties_formatter(raw) -> list:
         for i in faculties:
             key = i.get("value")#Тут разворачиваем где value=""
 
-            if key == "":
+            if key == "" or key is None:
                 continue
+
+            key = int(str(key))
 
             faculties_id.append(key)#all faculties keys
 
@@ -169,9 +171,12 @@ async def parse_groups_formatter():
                 continue
             
             if group['Name'] is None:
+                del group
                 continue
 
             group['course'] = course
+            group['ID'] = int(group["ID"])
+
             #groups is list of dicts
 
             del group['Sort']

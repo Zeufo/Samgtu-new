@@ -70,7 +70,6 @@ class HTTPGroupParser(Parser):
 
                     time.sleep(0.2) 
 
-
                 except Exception as e:
                     logger.exception(f'Unexpected error in parsing faculties... Trying another', e)
                     continue
