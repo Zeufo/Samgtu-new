@@ -61,3 +61,6 @@ dependencies = [
     "websocket-client==1.9.0",
     "yarl==1.22.0",
 ]
+
+[tool.ruff]
+line-length = 100

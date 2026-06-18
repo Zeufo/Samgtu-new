@@ -1,30 +1,21 @@
 import abc
-import typing
-
-
-from os import stat
-import requests
-import aiohttp
-import abc
-import typing
 import asyncio
-import aiohttp
-import requests
-import bs4
-from loguru import logger
-import time
-import json
-import re
 import datetime
-
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+import json
 import locale
+import re
+import time
+import typing
+from datetime import datetime, timedelta
+from os import replace, stat
+from zoneinfo import ZoneInfo
 
+import aiohttp
+import bs4
+import requests
+from loguru import logger
 
-TZ_SAMARA = ZoneInfo('Europe/Samara')
-
-
+TZ_SAMARA = ZoneInfo("Europe/Samara")
 
 
 def faculties_formatter(raw) -> list:
@@ -34,160 +25,161 @@ def faculties_formatter(raw) -> list:
 
     if faculties:
         faculties = faculties.find_all("option")
-    
+
         faculties_id = []
         for i in faculties:
-            key = i.get("value")#Тут разворачиваем где value=""
+            key = i.get("value")  # Тут разворачиваем где value=""
 
             if key == "" or key is None:
                 continue
 
             key = int(str(key))
 
-            faculties_id.append(key)#all faculties keys
+            faculties_id.append(key)  # all faculties keys
 
         return faculties_id
 
     else:
         raise RuntimeError
-    
 
 
-
-#Okay< here the funadmental func. it will request every 30 min schedule to the group from db 
-#so we need put in func week, grp_id or maybe take it from the data base
-#this func will work every 30 min or when user asks.
+# Okay< here the funadmental func. it will request every 30 min schedule to the group from db
+# so we need put in func week, grp_id or maybe take it from the data base
+# this func will work every 30 min or when user asks.
 async def clean_schedule(response):
-        raw_text = await response.text()
+    raw_text = await response.text()
 
-        try:
-            json_start = raw_text.find('{')
-            if json_start != -1:
-                clean_json_str = raw_text[json_start:]
-                data = json.loads(clean_json_str)
-            else:
-                return []
-
-        except json.JSONDecodeError as e:
+    try:
+        json_start = raw_text.find("{")
+        if json_start != -1:
+            clean_json_str = raw_text[json_start:]
+            data = json.loads(clean_json_str)
+        else:
             return []
 
-        cleanr = re.compile('<.*?>')
+    except json.JSONDecodeError as e:
+        return []
 
-        def clean_text(text):
-            if not text: return ""
-            text = re.sub(cleanr, ' ', text)
-            text = text.replace('^', '')
-            text = text.replace('\xa0', ' ').strip()
-            return text
-        
-        days = data.get('wd', {})
-       
-        schedule = []
-        #no_date_schedule = []
-        #no_date_temp = {}
-        temp = {}
+    cleanr = re.compile("<.*?>")
 
-        #day_id = 0
+    def clean_text(text):
+        if not text:
+            return ""
+        text = re.sub(cleanr, " ", text)
+        text = text.replace("^", "")
+        text = text.replace("\xa0", " ").strip()
+        return text
 
-        i = 0
-       
-        #today = datetime.now(TZ_SAMARA)
-        #start_of_week = today - timedelta(days=today.weekday())
+    days = data.get("wd", {})
 
+    schedule = []
+    # no_date_schedule = []
+    # no_date_temp = {}
+    temp = {}
 
-        for day_id, day_data in days.items():
-            day_name = day_data.get("Name")
-            times = day_data.get('at', {})
-    
-            temp = {'day_name': day_name}
-            #lessons_info_temp = {}#-----------------------
+    # day_id = 0
 
-            #day = start_of_week + timedelta(days=i)        
-                    #week_day = day.strftime('%A')
+    i = 0
 
-            #date_name = day.strftime('%d %B')
+    # today = datetime.now(TZ_SAMARA)
+    # start_of_week = today - timedelta(days=today.weekday())
 
-            #temp['week_day'] = date_name,
-            temp['lessons'] = {}
-            #no_date_temp['lessons'] = {}       
-                    
+    for day_id, day_data in days.items():
+        day_name = day_data.get("Name")
+        times = day_data.get("at", {})
 
-            less = 1
+        temp = {"day_name": day_name}
+        # lessons_info_temp = {}#-----------------------
 
-            for time_id, time_info in times.items():
+        # day = start_of_week + timedelta(days=i)
+        # week_day = day.strftime('%A')
 
-                cells = time_info.get("Cells", [])
+        # date_name = day.strftime('%d %B')
 
-                if not cells:
-                    continue
-                
+        # temp['week_day'] = date_name,
+        temp["lessons"] = {}
+        # no_date_temp['lessons'] = {}
 
-                for cell in cells:
-                    time_name = clean_text(time_info.get("Name"))
-                    content = clean_text(cell.get('CellName', ''))
-                    week_type = cell.get("WeekTypeName", '')
-                   
-                    
-                    if content is not None:
-                        temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
-                        #no_date_temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')} 
-                    #lessons_info_temp[f'lesson {less}'] = content,
-                    #lessons_info_temp['time'] = time_name
+        less = 1
 
-                    less = less + 1
+        for time_id, time_info in times.items():
+            cells = time_info.get("Cells", [])
 
-            i += 1
+            if not cells:
+                continue
 
-            #temp[f'less_inf'] = lessons_info_temp
+            for cell in cells:
+                time_name = clean_text(time_info.get("Name"))
+                content = clean_text(cell.get("CellName", ""))
+                week_type = cell.get("WeekTypeName", "")
 
-            #print(f"temp now is... {temp}")
-            schedule.append(temp)
-            #no_date_schedule.append(no_date_temp)
-        #print(f'sch to return... {schedule}'i)
+                if content is not None:
+                    temp["lessons"][less] = {
+                        "пара": content.replace("№ ", "№")
+                        .replace("лекция", "(лекция)")
+                        .replace("практические занятия", "(практика)")
+                        .replace("лабораторные занятия", "(лаба)")
+                        .replace("аудитория", "ауд.")
+                        .replace(",", "")
+                        .replace("корпус", "кор.")
+                        .replace("экзамен", "(экз.)"),
+                        "время": time_name.replace(" -", "-").replace(" ", ":"),
+                    }
+                    # no_date_temp['lessons'][less] = {'пара' : content.replace('№ ', '№').replace('лекция', '(лекция)').replace('практические занятия','(практика)').replace('лабораторные занятия', '(лаба)').replace('аудитория', 'ауд.').replace(',',''), 'время': time_name.replace(' -', '-').replace(' ', ':')}
+                # lessons_info_temp[f'lesson {less}'] = content,
+                # lessons_info_temp['time'] = time_name
 
-        logger.info(f"schedule to return in the parser is... {schedule}")
-        return schedule
+                less = less + 1
 
+        i += 1
+
+        # temp[f'less_inf'] = lessons_info_temp
+
+        # print(f"temp now is... {temp}")
+        schedule.append(temp)
+        # no_date_schedule.append(no_date_temp)
+    # print(f'sch to return... {schedule}'i)
+
+    logger.info(f"schedule to return in the parser is... {schedule}")
+    return schedule
 
 
 async def parse_groups_formatter():
     groups_info = []
-    
-    async def add_groups_to_info(groups_from_faculty: list, course: int, faculty: int,  need_return=False):
-        nonlocal groups_info 
-        
+
+    async def add_groups_to_info(
+        groups_from_faculty: list, course: int, faculty: int, need_return=False
+    ):
+        nonlocal groups_info
+
         if need_return == True:
             return groups_info
 
         for group in groups_from_faculty:
+            group["Name"] = group["Name"].rsplit(None, 1)[-1]
+            group["Name"] = group["Name"].replace("–", "")
+            group["Name"] = group["Name"][2:].upper()
 
-
-            group['Name'] = group['Name'].rsplit(None, 1)[-1]
-            group['Name'] = group['Name'].replace("–", "")
-            group['Name'] = group['Name'][2:].upper()
-
-            if len(group["Name"]) < 5 or len(group["Name"].translate(str.maketrans('', '', '1234567890'))) < 2:
-                del group
-                continue
-            
-            if group['Name'] is None:
+            if (
+                len(group["Name"]) < 5
+                or len(group["Name"].translate(str.maketrans("", "", "1234567890"))) < 2
+            ):
                 del group
                 continue
 
-            group['course'] = course
-            group['ID'] = int(group["ID"])
+            if group["Name"] is None:
+                del group
+                continue
 
-            #groups is list of dicts
+            group["course"] = course
+            group["ID"] = int(group["ID"])
 
-            del group['Sort']
+            # groups is list of dicts
 
-            to_insert = [group['ID'], group["Name"], faculty, group["course"]]
+            del group["Sort"]
+
+            to_insert = [group["ID"], group["Name"], faculty, group["course"]]
 
             groups_info.append(to_insert)
 
-
     return add_groups_to_info
-
-
-
-
