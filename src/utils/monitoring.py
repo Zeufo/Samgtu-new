@@ -81,15 +81,15 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
                 changes.append(
                     f"❌ убрали\n <b>{day_name}, {week_day}</b>, пара {pair_num}\n"
                     f"⏱️<code>{old_lesson['время']}</code>\n"
-                    f"📚{old_lesson['пара']}\n"
+                    f"📚{old_lesson['пара'].replace('ауд.', ' | ауд.')}\n"
                 )
 
                 changes.append("_________________________________\n")
             elif old_lesson != new_lesson:
                 changes.append(
                     f"✏️ Замена\n<b>{day_name}, {week_day}</b>, пара {pair_num}\n"
-                    f"Было: \n⏱️<code>{old_lesson['время']}\n</code>📚{old_lesson['пара']}\n"  # type:ignore
-                    f"Стало: \n⏱️<code>{new_lesson['время']}\n</code>📚{new_lesson['пара']}\n"  # type:ignore
+                    f"Было: \n⏱️<code>{old_lesson['время'].replace('ауд.', ' | ауд.')}\n</code>📚{old_lesson['пара'].replace('ауд.', ' | ауд.')}\n"  # type:ignore
+                    f"Стало: \n⏱️<code>{new_lesson['время']}\n</code>📚{new_lesson['пара'].replace('ауд.', ' | ауд.')}\n"  # type:ignore
                 )
                 changes.append("_________________________________\n")
 

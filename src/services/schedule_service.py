@@ -160,7 +160,8 @@ async def schedule_day_service(
             schd = await schedule_week_service(message, session, http_session, False)
 
         if schd is None:
-            return "Выходной"
+            return None
+
         for day in schd:
             if days[time_now.weekday()] in day.values():
                 if len(day.get("lessons", 0)) == 0:

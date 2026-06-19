@@ -1,38 +1,14 @@
-from array import typecodes
-import sqlite3
-import typing
-from aiogram import BaseMiddleware
-import aiosqlite
 import abc
-import psycopg
-import asyncio
-import os
+import typing
 
-from database.models import User, Schedule, Group, Base
-
-
-from sqlalchemy.engine.base import Connection
-from sqlalchemy.orm import immediateload
-from config import DBNAME, USER, PASSWORD, HOST, PORT
-from psycopg_pool import ConnectionPool, AsyncConnectionPool
+from aiogram import BaseMiddleware
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from psycopg_pool import AsyncConnectionPool
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-
-from database.models import engine
-from database.models import User, AsyncSessionLocal
-#------------------------TO DO ---------------------------
-#
-#1. how to make several connection? because ask for conn every time from the func is a bad thing, so we never do in the postgres
-#
-#
-#
-#
-#__________________________________________________________
-
-
+from config import DBNAME, HOST, PASSWORD, PORT, USER
+from database.models import AsyncSessionLocal, Base, engine
 
 
 class DBConnect(abc.ABC):
@@ -48,7 +24,6 @@ class DBTablesCreator(abc.ABC):
         pass
 
 
-
 class DBFillTable(abc.ABC):
     @staticmethod
     @abc.abstractmethod
@@ -56,30 +31,24 @@ class DBFillTable(abc.ABC):
         pass
 
 
-
 class DBCRUD(abc.ABC):
     pass
 
 
-class SQLiteConnect(DBConnect):
-    async def get_conn(self) -> sqlite3.Connection:#type:ignore IGNORE BECAUSE SQLITE CONNECTION IS NOT REALISED
-        pass
-
-#DO we need to class remember his conn?
 @typing.final
 class PostgreConnect(DBConnect):
     @staticmethod
     async def get_alchemy_conn() -> AsyncSession:
         connection = AsyncSessionLocal()
 
-        
         return connection
 
     @staticmethod
     async def get_async_pool():
 
-        logger.info(f'trying to connect with {DBNAME}\t{USER}\t{HOST}\t{PORT}')
-        pool = AsyncConnectionPool(conninfo=f"""
+        logger.info(f"trying to connect with {DBNAME}\t{USER}\t{HOST}\t{PORT}")
+        pool = AsyncConnectionPool(
+            conninfo=f"""
             dbname={DBNAME}
             user={USER}
             password={PASSWORD}
@@ -88,33 +57,29 @@ class PostgreConnect(DBConnect):
             sslmode=disable
             gssencmode=disable""",
             min_size=4,
-            max_size=10
+            max_size=10,
         )
-        
-        logger.info('Succes connection')
+
+        logger.info("Succes connected")
 
         return pool
 
 
-
-#ADD HERE -> WHAT WE ARE WAITING HERE
 @typing.final
 class PostgreDBTablesCreation(DBTablesCreator):
     @staticmethod
     async def create() -> None:
         try:
-
-            logger.info('Creating the tables')
+            logger.info("Creating the tables")
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-#
-                logger.info('Tables created')
+                #
+                logger.info("Tables created")
                 await conn.commit()
                 await conn.close()
 
         except Exception as e:
-            logger.exception('Creation trouble', e)
-
+            logger.exception("Problem with creating tables", e)
 
 
 @typing.final
@@ -132,18 +97,22 @@ class PostgreFillTablesCreation(DBFillTable):
                         VALUES (:group_id, :group_name, :faculty_id, :course, :in_use)
                     """),
                     [
-                        {"group_id": row[0], "group_name": row[1], "faculty_id": row[2], "course": row[3], "in_use": row[4]}
+                        {
+                            "group_id": row[0],
+                            "group_name": row[1],
+                            "faculty_id": row[2],
+                            "course": row[3],
+                            "in_use": row[4],
+                        }
                         for row in to_insert
-                    ])
+                    ],
+                )
 
                 await conn.commit()
                 await conn.close()
 
         except Exception as e:
             logger.opt(exception=e).critical("Cant fill the tables")
-
-
-
 
 
 class AlchemyMiddleware(BaseMiddleware):
@@ -154,24 +123,3 @@ class AlchemyMiddleware(BaseMiddleware):
         async with self.session_factory() as session:
             data["session"] = session
             return await handler(event, data)
-
-
-#class AsyncpgMiddleware(BaseMiddleware):
-#    def  __init__(self, pool):
-#        self.pool = pool
-#
-#    async def __call__ (self, handler, event, data):
-#        async with self.pool.acquire() as conn:
-#            data["conn"] = conn
-#            await handler(event, data)
-        
-
-
-
-
-
-
-
-
-
-

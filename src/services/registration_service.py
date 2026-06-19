@@ -32,15 +32,14 @@ class RegistartionUser(StatesGroup):
     write_in_base = State()
 
 
-#
-
-
 async def welcome(message: Message, state: FSMContext) -> None:
     try:
         await message.answer(
-            "В боте включен режим антиспама. Если вам не ответили, попробуйте еще раз"
+            """
+В боте включен режим антиспама. Если вам не ответили, попробуйте еще раз\n
+Введите курс и название факультета.\nПример: 1ИАИТ 4ТЭФ""",
+            reply_markup=ReplyKeyboardRemove(),
         )
-        await message.answer("Введите курс и название факультета.\nПример: 1ИАИТ 4ТЭФ")
         await state.set_state(RegistartionUser.waiting_for_faculty)
     except Exception:
         pass
@@ -83,33 +82,15 @@ async def get_user_group_service(message: Message, state: FSMContext) -> None:
             data = await state.get_data()
 
             await message.answer(
-                f"Ваш факультет {data.get('faculty')}, Курс {data.get('course')}, группа {raw_name}"
-            )
-            await message.answer(
-                "Все верно?", reply_markup=admit_decline_kb.as_markup(resize_keyboard=True)
+                f"""Ваш факультет {data.get("faculty")}, Курс {data.get("course")}, группа {raw_name}
+Все верно?""",
+                reply_markup=admit_decline_kb.as_markup(resize_keyboard=True),
             )
 
             await state.set_state(RegistartionUser.write_in_base)
 
     except Exception:
         pass
-
-
-allowed_table = [
-    "ИАИТ",
-    "ВБШ",
-    "ИИЭГО",
-    "ИНГТ",
-    "ИТФ",
-    "СПО",
-    "СТФ",
-    "ТЭФ",
-    "ФАД",
-    "ФММТ",
-    "ФПГС",
-    "ХТФ",
-    "ЭТФ",
-]
 
 
 async def write_user_service(message: Message, state: FSMContext, session: AsyncSession) -> None:
@@ -124,47 +105,47 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
             course = int(data.get("course", 0))
 
             if faculty not in allowed_table:
-                await message.answer("Факультет не найден, доступные:")
-                await message.answer(str(allowed_table), reply_markup=ReplyKeyboardRemove())
-                await message.answer("/start")
+                await message.answer(
+                    f"Факультет не найден, доступные:\n{str(allowed_table)}\n/start",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
                 await state.clear()
+                return
 
             group_name = faculty + data.get("group", 0)
 
             group_id = await group_service.get_id(group_name, course)
 
             if group_id is None:
-                await message.answer("Не найдена информация о группе, проверьте данные")
+                await message.answer(
+                    "Не найдена информация о группе, проверьте данные\n/start",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
                 return
 
             user = await user_service.add_user(
                 message.chat.id, course, faculty, group_id, "Not now"
             )  # type: ignore
-            logger.info(
-                f"logged succesfully with {course}\t{faculty}\t{group_id}"
-            )  # -------------------------------------------------------------
-            logger.info(
-                f"logged succesfully with {user}"
-            )  # --------------------------------------------------------------------------------------
+            logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")
+            logger.info(f"logged succesfully with {user}")
             await message.answer(
-                "Можете пользоваться ботом",
+                "Можете пользоваться ботом\n/commands | доступные команды",
                 reply_markup=schedule_kb.as_markup(resize_keyboard=True),
             )
             await state.clear()
             return
 
-        logger.info(
-            "SOMEHOW RETURN DIDNT WORKED"
-        )  # -----------------------------------------------------------
         await message.answer(
-            "Попробуйте еще раз, проверьте название группы", reply_markup=ReplyKeyboardRemove()
+            "Попробуйте еще раз, проверьте название группы\n/start",
+            reply_markup=ReplyKeyboardRemove(),
         )
-        await message.answer("/start")
         await state.clear()
         return
 
     except Exception as e:
-        logger.exception("Problem with registration", e)
-        await message.answer("Что-то пошло не так, попробуйте еще раз")
+        logger.warning("Problem with registration", e)
+        await message.answer(
+            "Что-то пошло не так, попробуйте еще раз\n/start", reply_markup=ReplyKeyboardRemove()
+        )
         await state.clear()
         return
