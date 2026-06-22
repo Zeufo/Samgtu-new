@@ -43,6 +43,7 @@ async def schedule_this_week(
     logger.debug("На след. неделю сработало")
 
 
+@router.message(Command("nextweek", ignore_case=True))
 @router.message(F.text.upper().replace(" ", "") == "НАСЛЕД.НЕДЕЛЮ")
 async def schedule_next_week(
     message: Message, session: AsyncSession, http_session: aiohttp.ClientSession

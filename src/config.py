@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -29,12 +28,13 @@ try:
     HOST = os.getenv("DB_HOST")
     PORT = os.getenv("DB_PORT")
 
-    PROXY_LINK = os.environ["PROXY_LINK"]
     BOT_TOKEN = os.environ["TEST_BOT_TOKEN"]
-    ALL_GROUPS_LINK = os.environ["GET_GROUPS_LINK"]
-    SITE_LINK = os.environ["SITE_LINK"]
-    SCHD_LINK = os.environ["SCHD_LINK"]
-    GITHUB_LINK = os.environ["GITHUB_LINK"]
+    PROXY_LINK = os.environ["PROXY_LINK"]
+
+    ALL_GROUPS_LINK = "https://samgtu.ru/students/getgrouplist?Course={course}&Faculty={faculty}"
+    SITE_LINK = "https://samgtu.ru/students/schedule"
+    SCHD_LINK = "https://samgtu.ru/students/getschedule?GroupID={groupid}&WeekNumber={weeknumber}"
+    GITHUB_LINK = os.getenv("GITHUB_LINK", "неуказано")
 
     DATABASE_URL = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
 

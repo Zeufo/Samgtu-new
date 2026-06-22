@@ -44,7 +44,7 @@ class UserService:
             last_time_active=last_time_active,
         )
 
-        # if user exist set this values at...
+        # if user exists set this values at...
         stmt = stmt.on_conflict_do_update(
             index_elements=["user_id"],
             set_={
@@ -136,7 +136,7 @@ class ScheduleService:
         await self.session.execute(stmt)
         await self.session.commit()
 
-    # this operation will be use in monitoring service so we ttake session from init
+    # this operation will be use in monitoring service so we take session from init
     async def get_groups_id(self, week: int):  # -> list |Result i guess
         query = select(Schedule.group_id).where(Schedule.week_num == week)
         result = await self.session.execute(query)

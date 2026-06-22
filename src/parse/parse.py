@@ -1,18 +1,12 @@
 import abc
-import asyncio
-import json
 import time
 import typing
-from os import stat
 
 import aiohttp
-import bs4
-import requests
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
-# from legacy.db_parcer import faculties_to_db
 from config import ALL_GROUPS_LINK, SCHD_LINK, SITE_LINK
+from parse.datacleaner import clean_schedule, faculties_formatter, parse_groups_formatter
 
 
 class Parser(abc.ABC):
@@ -22,9 +16,6 @@ class Parser(abc.ABC):
         pass
 
 
-from parse.datacleaner import clean_schedule, faculties_formatter, parse_groups_formatter
-
-
 @typing.final
 class HTTPFacultyParser(Parser):
     @staticmethod
@@ -32,7 +23,7 @@ class HTTPFacultyParser(Parser):
         while True:
             try:
                 async with session.get(SITE_LINK) as response:
-                    raw = await response.text()  # is it awaitable?ignore
+                    raw = response.text()
 
                     return faculties_formatter(raw)
 
@@ -52,11 +43,8 @@ class HTTPGroupParser(Parser):
             for course in range(1, 7):
                 try:
                     formated_link = ALL_GROUPS_LINK.format(course=f"{course}", faculty=f"{faculty}")
-                    # formated_link = "https://samgtu.ru/students/getgrouplist?Course=4&Faculty=100111"
 
-                    logger.info(
-                        f"link is  {formated_link} "
-                    )  # efjigbnjisedfhgjidfhgjkohsdfpojgusdfpjghijsdfhgdfsg
+                    logger.debug(f"link is  {formated_link} ")
 
                     async with session.get(formated_link) as response:
                         data = await response.json(content_type=None)
@@ -84,9 +72,7 @@ class HTTPScheduleParser(Parser):
                 grp_id = int(grp_id)
 
             formated_link = SCHD_LINK.format(groupid=grp_id, weeknumber=weeknum)
-            logger.warning(
-                f"FORMATED LINK IS {formated_link}"
-            )  # ------------------------------------------------------------------
+            logger.debug(f"formated link is  {formated_link}")
 
             timeout = aiohttp.ClientTimeout(total=10)
 

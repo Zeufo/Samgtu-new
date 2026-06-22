@@ -2,7 +2,6 @@ import re
 from datetime import datetime, timedelta
 
 import aiohttp
-from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,11 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import TZ_SAMARA, WeekState
 from parse import HTTPScheduleParser
 
-from .service_classes import GroupService, ScheduleService, UserService
+from .service_classes import ScheduleService, UserService
 
 
-# we use this to get normal keys from database. actually im not sure if we really need that, but legacy code didnt worked without it
-# so let is just be
+# we use this to get normal keys from database. because keys in database is str but we need ints
 async def output_formatter(raw) -> list | dict | None:
     if isinstance(raw, list):
         for day in raw:
@@ -28,8 +26,7 @@ async def output_formatter(raw) -> list | dict | None:
         return raw
 
 
-# wee need to activate parse_mode='HTML' in message.answer
-# I DONT UNDERTSTAND WHY WE USE CHECK TO IF LN < 2? SO I COMMENT It, MAybe one day well nedd thath
+# wee activate parse_mode='HTML' in message.answer to be able to send emoji
 icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 
@@ -81,7 +78,6 @@ async def message_maker(raw: list | dict) -> str:
     return temp_msg
 
 
-# today here is time_now. i made it argument because dont like fact that we use time three times
 async def date_setter(no_date_schedule: list, is_next: bool, today) -> None:
     start_of_week = today - timedelta(days=today.weekday())
     if is_next:

@@ -1,3 +1,2 @@
-from .database import PostgreConnect, PostgreDBTablesCreation, PostgreFillTablesCreation, AlchemyMiddleware
-from .models import User, AsyncSessionLocal, Group, Schedule, engine, Base, close_db
-
+from .database import PostgreConnect, PostgreDBTablesCreation, PostgreFillTablesCreation
+from .models import AsyncSessionLocal, Base, Group, Schedule, User, close_db, engine

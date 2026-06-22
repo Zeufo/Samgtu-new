@@ -42,5 +42,6 @@ async def commands(message: Message) -> None:
 /week расписание на неделю
 /today расписание на день
 /tomorrow расписание на завтра
+/nextweek
         """
     )

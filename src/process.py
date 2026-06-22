@@ -2,18 +2,16 @@ import asyncio
 
 import aiohttp
 from aiogram import Bot, Dispatcher
-from loguru import logger
 
 from config import BOT_TOKEN
 from database import (
-    AlchemyMiddleware,
     AsyncSessionLocal,
     PostgreDBTablesCreation,
     PostgreFillTablesCreation,
 )
 from handlers import get_main_router
 from parse import HTTPFacultyParser, HTTPGroupParser
-from utils import changes_monitoring, logger
+from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring, logger
 
 
 class ProgrammProcess:
@@ -39,6 +37,7 @@ class ProgrammProcess:
 
         dp.include_router(get_main_router())
         dp.update.middleware(AlchemyMiddleware(session_factory=AsyncSessionLocal))
+        dp.update.outer_middleware(AntiSpamMiddleware(1))
 
         logger.info("Starting bot...")
 
