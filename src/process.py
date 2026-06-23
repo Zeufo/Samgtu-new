@@ -15,7 +15,7 @@ from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring, log
 
 
 class ProgrammProcess:
-    async def preparation(self, first_start=False) -> None:
+    async def preparation(self, first_start=True) -> None:
         await PostgreDBTablesCreation.create()
 
         if first_start:
