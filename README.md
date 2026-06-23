@@ -1,69 +1,64 @@
+
 # SamGTU schedule bot
 
 An asynchronous Telegram bot designed to display group schedules and instantly notify users about changes in real time.
 
 ## Run with Docker
 
-'''bash
-Not done yet
-'''
+```bash
+# Not implemented yet
+```
 
-## Functional
+## Features
 
-- [x] Get your group schedule
+- [x] View group schedule
 
-- [x] Changes alarm
+- [x] Receive change notifications
 
-## Technologies used
+## Technologies Used
 
 | Layer | Technologies |
 |------|-----------|
 | **Frontend** | aiogram |
-| **Backend** | Python, SQLAlchemy, UV (менеджер пакетов) |
-| **База данных** | PostgreSQL |
+| **Backend** | Python, SQLAlchemy, UV (package manager) |
+| **DataBase** | PostgreSQL |
 
-## 📂 Структура проекта
+## 📂 Project Structure
 
 ```text
 ├── src/
-│   ├── database/    # Alchemy table models and database logic
-│   ├── handlers/    # aiogram logic handlers
+│   ├── database/    # SQLAlchemy table models and database logic
+│   ├── handlers/    # aiogram handlers for bot commands
 │   ├── parse/       # Data parsing and cleaning
-│   ├── services/    # Bussines logic
-│   ├── utils/       # Helping utils (monitoring, logging)
-│   └── main.py      # Bot start point
-|   └── keyboards.py # reply keyboards in bot
-|   └── process.py   # Main process where everything starting
-|   └── config.py    # Config file
-├── pyproject.toml   # dependencies and configuration (uv, ruff, pyright)
+│   ├── services/    # Business logic
+│   ├── utils/       # Helper utilities (monitoring, logging)
+│   ├── main.py      # Bot entry point
+│   ├── keyboards.py # Reply keyboards for the bot
+│   ├── process.py   # Main process where everything starts
+│   └── config.py    # Configuration file
+├── pyproject.toml   # Dependencies and configuration (uv, ruff, pyright)
 └── README.md
 ```
 
 ## Environment Variables
 
-To run this project you need no add this Environment Variables to your .env file in bot dir
+To run this project, you need to add the following environment variables to your `.env` file in the bot directory:
 
-`BOT_TOKEN` | "Your_bot_token"
-
-`PROXY_LINK` | LINK |  From where you will take week num
-
-`DB_HOST`    | Database host (postgre)
-
-`DB_PORT` | Database port
-
-`DB_NAME` | Database name
-
-`DB_USER` | User name
-
-`DB_PASSWORD` | Password
+| Variable      | Description                                      |
+|---------------|--------------------------------------------------|
+| `BOT_TOKEN`   | Your bot token from BotFather                    |
+| `PROXY_LINK`  | URL to fetch the current week number (university website) |
+| `DB_HOST`     | Database host                                    |
+| `DB_PORT`     | Database port                                    |
+| `DB_NAME`     | Database name                                    |
+| `DB_USER`     | Database user                                    |
+| `DB_PASSWORD` | Database password                                |
 
 ## Roadmap
 
-- [ ] change design
-
-- [ ] increase functional
-
-- [ ] Optimise Database requests
+- [ ] Redesign UI
+- [ ] Add more functionality
+- [ ] Optimize database queries
 
 ## Run Locally
 
@@ -76,7 +71,7 @@ Clone the project
 Go to the project directory
 
 ```bash
-  cd bot-remake
+  cd Samgtu-new
 ```
 
 Install dependencies
@@ -85,7 +80,7 @@ Install dependencies
   uv sync
 ```
 
-run the programm
+Run the program
 
 ```bash
   uv run src/main.py
@@ -94,6 +89,11 @@ run the programm
 ## Screenshots
 
 ![App Screenshot](https://dummyimage.com/468x300?text=App+Screenshot+Here)
+
+## 👤 Author
+
+- GitHub: <https://github.com/Zeufo>
+- Telegram: @Zeufo
 
 ## License
 
