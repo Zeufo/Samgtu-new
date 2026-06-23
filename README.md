@@ -8,6 +8,8 @@ An asynchronous Telegram bot designed to display group schedules and instantly n
 
 <img width="272" height="473" alt="Снимок экрана_20260622_123640" src="https://github.com/user-attachments/assets/898a7a4d-cdfa-44e8-af1b-f22acec52346" />
 
+<img width="296" height="478" alt="Снимок экрана_20260622_123600" src="https://github.com/user-attachments/assets/a8f40cd1-a896-4946-9ab1-10e59e31dd04" />
+
 ## Run with Docker
 
 ```bash
@@ -19,8 +21,6 @@ An asynchronous Telegram bot designed to display group schedules and instantly n
 - [x] View group schedule
 
 - [x] Receive change notifications
-
-<img width="296" height="478" alt="Снимок экрана_20260622_123600" src="https://github.com/user-attachments/assets/a8f40cd1-a896-4946-9ab1-10e59e31dd04" />
 
 ## Technologies Used
 
