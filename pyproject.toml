@@ -13,6 +13,7 @@ dependencies = [
     "cachetools==7.0.5",
     "dotenv>=0.9.9",
     "loguru>=0.7.3",
+    "lxml>=6.1.1",
     "psycopg-pool",
     "psycopg[binary,pool]>=3.3.4",
     "requests==2.32.5",

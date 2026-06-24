@@ -23,7 +23,7 @@ class HTTPFacultyParser(Parser):
         while True:
             try:
                 async with session.get(SITE_LINK) as response:
-                    raw = response.text()
+                    raw = await response.text()
 
                     return faculties_formatter(raw)
 

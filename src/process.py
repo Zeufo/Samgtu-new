@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 from aiogram import Bot, Dispatcher
+from sqlalchemy import text
 
 from config import BOT_TOKEN
 from database import (
@@ -15,15 +16,24 @@ from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring, log
 
 
 class ProgrammProcess:
-    async def preparation(self, first_start=True) -> None:
+    async def preparation(self) -> None:
         await PostgreDBTablesCreation.create()
 
-        if first_start:
-            async with aiohttp.ClientSession() as session:
-                faculties = await HTTPFacultyParser.parse(session)
+        async with AsyncSessionLocal() as first_start_checker:
+            result = await first_start_checker.execute(text("SELECT * FROM all_groups"))
+            result = result.scalar_one_or_none()
 
-                groups = await HTTPGroupParser.parse(session, faculties)
-                await PostgreFillTablesCreation.fill(groups)
+            logger.warning(f"first_start_checker is {result}")
+            if result is None:
+                logger.info("Groups table is empty, starting filling process...")
+                async with aiohttp.ClientSession() as session:
+                    faculties = await HTTPFacultyParser.parse(session)
+
+                    groups = await HTTPGroupParser.parse(session, faculties)
+                    await PostgreFillTablesCreation.fill(groups)
+            else:
+                logger.info("Groups table has data, continue...")
+                await first_start_checker.close()
 
     async def main_process(self) -> None:
         bot = Bot(token=BOT_TOKEN)
@@ -32,7 +42,7 @@ class ProgrammProcess:
         logger.info("Process started!")
 
         PreparationProcess = ProgrammProcess()
-        await PreparationProcess.preparation(False)
+        await PreparationProcess.preparation()
         logger.info("Preparation passed")
 
         dp.include_router(get_main_router())

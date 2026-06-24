@@ -70,8 +70,13 @@ class UserService:
         query = select(User.user_id).where(User.group_id == group_id)
         result = await self.session.execute(query)
 
-        result = (result.tuples().all())[0]
-        logger.debug(f"result is {result}")
+        try:
+            result = (result.tuples().all())[0]
+            logger.debug(f"result is {result}")
+
+        except IndexError:
+            result = None
+
         return result
 
 
