@@ -1,5 +1,4 @@
 
-
 # SamGTU schedule bot
 
 An asynchronous Telegram bot designed to display group schedules and instantly notify users about changes in real time.
@@ -13,7 +12,7 @@ An asynchronous Telegram bot designed to display group schedules and instantly n
 ## Run with Docker
 
 ```bash
-# Not implemented yet
+docker compose up -d
 ```
 
 ## Features
