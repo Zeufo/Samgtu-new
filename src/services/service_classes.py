@@ -1,18 +1,11 @@
-import asyncio
 import typing
 
-from aiogram import types
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, ReplyKeyboardRemove
 from loguru import logger
-from sqlalchemy import and_, delete, select, update
+from sqlalchemy import and_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Group, Schedule, User
-from database.models import AsyncSessionLocal
-from keyboards import admit_decline_kb, schedule_kb
 
 
 class UserService:

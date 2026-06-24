@@ -21,7 +21,7 @@ class ProgrammProcess:
 
         async with AsyncSessionLocal() as first_start_checker:
             result = await first_start_checker.execute(text("SELECT * FROM all_groups"))
-            result = result.scalar_one_or_none()
+            result = result.first()
 
             logger.warning(f"first_start_checker is {result}")
             if result is None:

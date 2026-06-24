@@ -1,7 +1,7 @@
 from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Update, message
+from aiogram.types import TelegramObject, Update
 from cachetools import TTLCache
 
 

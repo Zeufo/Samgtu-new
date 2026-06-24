@@ -21,7 +21,7 @@ async def get_current_week_int(session: aiohttp.ClientSession) -> None:
             WeekState.week = int(new_week)
 
     except Exception as e:
-        logger.warning("Cant reach the number of week at first start")
+        logger.warning("Cant reach the number of week at first start", e)
         raise RuntimeError
 
 

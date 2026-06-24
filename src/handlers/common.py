@@ -33,7 +33,7 @@ async def info(message: Message) -> None:
 @router.message(Command("commands", ignore_case=True))
 async def commands(message: Message) -> None:
     await message.answer(
-        f"""/start начать
+        """/start начать
 /commands список команд
 /info и /about информация о проекте
 

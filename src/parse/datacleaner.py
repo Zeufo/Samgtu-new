@@ -3,7 +3,6 @@ import re
 from zoneinfo import ZoneInfo
 
 import bs4
-from loguru import logger
 
 TZ_SAMARA = ZoneInfo("Europe/Samara")
 
@@ -110,7 +109,7 @@ async def parse_groups_formatter():
     ):
         nonlocal groups_info
 
-        if need_return == True:
+        if need_return:
             return groups_info
 
         for group in groups_from_faculty:

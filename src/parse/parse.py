@@ -28,7 +28,7 @@ class HTTPFacultyParser(Parser):
                     return faculties_formatter(raw)
 
             except Exception as e:
-                logger.exception(f"Unexpected error in parsing faculties...", e)
+                logger.exception("Unexpected error in parsing faculties...", e)
                 time.sleep(1)
 
 
@@ -53,7 +53,7 @@ class HTTPGroupParser(Parser):
                     time.sleep(0.2)
 
                 except Exception as e:
-                    logger.exception(f"Unexpected error in parsing faculties... Trying another", e)
+                    logger.exception("Unexpected error in parsing faculties... Trying another", e)
                     continue
 
         total = await collect_groups([], 0, 0, True)

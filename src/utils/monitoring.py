@@ -162,7 +162,9 @@ async def changes_monitoring(
                                 local_week, row, to_update
                             )
                             logger.debug("Updated")
-                            await notify_users.send(users, changes, bot)
+
+                            if users:
+                                await notify_users.send(users, changes, bot)
 
                         await asyncio.sleep(10)
 

@@ -1,16 +1,10 @@
-import asyncio
-
 import aiohttp
-from aiogram import F, Router, types
-from aiogram.filters import Command, CommandStart
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
+from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.types import Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import AsyncSessionLocal
-from keyboards import admit_decline_kb, schedule_kb
 from services import message_maker, schedule_day_service, schedule_week_service
 
 router = Router(name=__name__)

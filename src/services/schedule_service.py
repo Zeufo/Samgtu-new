@@ -107,7 +107,7 @@ async def schedule_week_service(
         week = WeekState.week
         time_now = datetime.now(TZ_SAMARA)
 
-        if is_next_week == True:
+        if is_next_week:
             week += 1
 
         schd = await output_formatter(await ScheduleServ.get_schedule(week, group_id))
