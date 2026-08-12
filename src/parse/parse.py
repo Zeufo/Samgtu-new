@@ -36,6 +36,10 @@ class HTTPFacultyParser(Parser):
 class HTTPGroupParser(Parser):
     @staticmethod
     async def parse(session: aiohttp.ClientSession, faculties_id: list) -> list:
+        if not faculties_id:
+            logger.error("faculties_id cant be None")
+            raise ValueError("faculties_id cant be None")
+
         collect_groups = await parse_groups_formatter()
 
         for faculty in faculties_id:
