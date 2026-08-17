@@ -20,9 +20,9 @@ async def get_current_week_int(session: aiohttp.ClientSession) -> None:
             new_week: int
             WeekState.week = int(new_week)
 
-    except Exception as e:
-        logger.warning("Cant reach the number of week at first start", e)
-        raise RuntimeError
+    except Exception:
+        logger.warning("site has no common week setted... using 1 as common")
+        WeekState.week = 1
 
 
 @router.startup()

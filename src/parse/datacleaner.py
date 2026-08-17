@@ -3,6 +3,7 @@ import re
 from zoneinfo import ZoneInfo
 
 import bs4
+from loguru import logger
 
 TZ_SAMARA = ZoneInfo("Europe/Samara")
 
@@ -33,9 +34,8 @@ def faculties_formatter(raw) -> list:
 
 
 async def clean_schedule(response):
-    raw_text = await response.text()
-
     try:
+        raw_text = await response.text()
         json_start = raw_text.find("{")
         if json_start != -1:
             clean_json_str = raw_text[json_start:]
@@ -44,6 +44,10 @@ async def clean_schedule(response):
             return []
 
     except json.JSONDecodeError as e:
+        return []
+
+    except Exception as e:
+        logger.warning("Unexpected error! bad response from server", e)
         return []
 
     cleanr = re.compile("<.*?>")

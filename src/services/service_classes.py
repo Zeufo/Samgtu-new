@@ -1,13 +1,15 @@
 import typing
 
 from loguru import logger
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Group, Schedule, User
 
 
+# TODO: actually we should add get_users_in_group to the GroupService instead
+# actually not, since UserServ is the class for users table
 class UserService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -71,6 +73,13 @@ class UserService:
             result = None
 
         return result
+
+    @staticmethod
+    async def get_all_users() -> int:
+        query = select(func.count()).select_from(User)
+        async with AsyncSession() as session:
+            result = await session.scalar(query)
+            return result or 1
 
 
 class GroupService:
