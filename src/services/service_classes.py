@@ -1,11 +1,11 @@
 import typing
 
 from loguru import logger
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Group, Schedule, User
+from database import AsyncSessionLocal, Group, Schedule, User
 
 
 # TODO: actually we should add get_users_in_group to the GroupService instead
@@ -75,11 +75,25 @@ class UserService:
         return result
 
     @staticmethod
-    async def get_all_users() -> int:
+    async def count_all_users() -> int:
         query = select(func.count()).select_from(User)
-        async with AsyncSession() as session:
+        async with AsyncSessionLocal() as session:
             result = await session.scalar(query)
             return result or 1
+
+    @staticmethod
+    async def delete_user(user_id: int) -> None:
+        query = delete(User).where(User.user_id == user_id)
+        async with AsyncSessionLocal() as session:
+            await session.execute(query)
+            await session.commit()
+
+    @staticmethod
+    async def get_all_users() -> tuple[int]:
+        query = select(User.user_id)
+        async with AsyncSessionLocal() as session:
+            result = await session.scalars(query)
+            return tuple(result.all())  # type: ignore
 
 
 class GroupService:

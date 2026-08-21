@@ -21,7 +21,7 @@ class NotifyUsers(Notifier):
         for user in target_id:
             try:
                 await service.send_message(user, text, parse_mode="HTML")
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.3)
 
             except Exception as e:
                 logger.info(f"problem found! {e}")

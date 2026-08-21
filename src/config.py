@@ -35,6 +35,7 @@ try:
     SITE_LINK = "https://samgtu.ru/students/schedule"
     SCHD_LINK = "https://samgtu.ru/students/getschedule?GroupID={groupid}&WeekNumber={weeknumber}"
     GITHUB_LINK = os.getenv("GITHUB_LINK", "неуказано")
+    ADMIN_ID = int(os.getenv("ADMIN_ID"))  # type: ignore
 
     DATABASE_URL = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
 

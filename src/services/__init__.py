@@ -1,6 +1,7 @@
 from .admin_service import count_active_users
 from .notification_service import NotifyUsers
 from .registration_service import (
+    delete_user_cause_block,
     get_user_faculty_service,
     get_user_group_service,
     welcome,

@@ -45,6 +45,10 @@ async def welcome(message: Message, state: FSMContext) -> None:
         pass
 
 
+async def delete_user_cause_block(user_id: int) -> None:
+    await UserService.delete_user(user_id)
+
+
 # here we need to add what to do  if doesnt worked
 async def get_user_faculty_service(message: Message, state: FSMContext) -> None:
     try:

@@ -37,11 +37,9 @@ async def commands(message: Message) -> None:
 /commands список команд
 /info и /about информация о проекте
 
-/settings настройки (не реализовано)
-
 /week расписание на неделю
 /today расписание на день
 /tomorrow расписание на завтра
-/nextweek
+/nextweek расписание следующей недели
         """
     )
