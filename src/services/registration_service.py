@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, ReplyKeyboardRemove
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import TZ_SAMARA
 from keyboards import admit_decline_kb, schedule_kb
 
 from .service_classes import GroupService, UserService
@@ -127,8 +130,15 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
                 )
                 return
 
+            time_now = datetime.now(TZ_SAMARA)
+            when_was_active = time_now.strftime("%d %B %H:%M")
+
             user = await user_service.add_user(
-                message.chat.id, course, faculty, group_id, "Not now"
+                message.chat.id,
+                course,
+                faculty,
+                group_id,
+                when_was_active,
             )  # type: ignore
             logger.info(f"logged succesfully with {course}\t{faculty}\t{group_id}")
             logger.info(f"logged succesfully with {user}")
