@@ -94,7 +94,8 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
                 changes.append("_________________________________\n")
 
     header = "🔔 Изменения в расписании:\n\n"
-    return header + "\n".join(changes)
+    caution = "ВНИМАНИЕ! оповещение работает в тестовом формате.\n Пожалуйста, проверьте изменения на достоверность в личном кабинете"
+    return header + caution + "\n".join(changes)
 
 
 async def changes_monitoring(
