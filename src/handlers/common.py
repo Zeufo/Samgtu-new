@@ -69,9 +69,12 @@ async def getback_button(message: Message) -> None:
 @router.message(FeedBackCommands.waiting_for_message)
 async def recive_feedback_message(message: Message, state: FSMContext, bot: Bot) -> None:
     if message.text == "exit":
-        await message.answer("Отменено")
+        await message.answer("Отменено", reply_markup=schedule_kb.as_markup(resize_keyboard=True))
+        await state.clear()
         return
-
+    elif message.text == "Вернуться":
+        await state.clear()
+        return
     if message.text:
         await bot.send_message(ADMIN_ID, message.text)
         await message.answer("Отправлено")
