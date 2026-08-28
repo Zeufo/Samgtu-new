@@ -99,7 +99,7 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
 
 
 async def changes_monitoring(
-    http_session: aiohttp.ClientSession, session_maker, bot: aiogram.Bot
+        http_session: aiohttp.ClientSession, session_maker, bot: aiogram.Bot, NOTIFICATIONS_ENABLED: bool = False
 ) -> None:
 
     await asyncio.sleep(10)
@@ -149,8 +149,10 @@ async def changes_monitoring(
 
                         else:
                             logger.info(f"Schedule changed for {row}... starting alarm")
+
+
                             changes = await schedule_diff_seeker(old_schd, new_schd)
-                            users = await user_service.get_all_users_in_group(row)
+
 
                             to_update = {
                                 "schedule_json": new_schd,
@@ -164,7 +166,8 @@ async def changes_monitoring(
                             )
                             logger.debug("Updated")
 
-                            if users:
+                            if users and NOTIFICATIONS_ENABLED:
+                                users = await user_service.get_all_users_in_group(row)
                                 await notify_users.send(users, changes, bot)
 
                         await asyncio.sleep(10)

@@ -67,11 +67,14 @@ async def send_everyone(message: Message, state: FSMContext) -> None:
 async def send_message(message: Message, state: FSMContext, bot: Bot) -> None:
     if message.text == "exit":
         await message.answer("Отменено.")
+        await state.clear()
         return
+
     users = await UserService.get_all_users()
     notify = NotifyUsers(bot)
     await notify.send(users, message.text, bot)  # type:ignore
     await message.answer("Отправлено")
+    await state.clear()
 
 
 @router.message(Command("admin_send_specific", ignore_case=True))
