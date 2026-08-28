@@ -21,8 +21,8 @@ async def get_current_week_int(session: aiohttp.ClientSession) -> None:
             WeekState.week = int(new_week)
 
     except Exception:
-        logger.warning("site has no common week setted... using 1 as common")
-        WeekState.week = 1
+        logger.warning("site has no common week setted... using 0 as common")
+        WeekState.week = 0
 
 
 @router.startup()
