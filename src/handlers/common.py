@@ -26,6 +26,7 @@ async def say_hello(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("info", ignore_case=True))
 @router.message(Command("about", ignore_case=True))
+@router.message(F.text.replace(" ", "").upper().in_({"ОНАС"}))
 async def info(message: Message) -> None:
     await message.answer(
         f"""Некоммерческий Open Source проект, созданный силами студентов для улучшения качества образовательной среды.
