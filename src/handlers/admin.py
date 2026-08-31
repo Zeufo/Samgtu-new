@@ -22,6 +22,7 @@ router = Router(name=__name__)
 
 class AdminCommands(StatesGroup):
     waiting_for_command = State()
+    waiting_for_id = State()
 
 
 async def is_user_admin(message: Message) -> bool:
@@ -44,6 +45,7 @@ admin_commands = """
 1./admin_commands
 2./admin_send_everyone
 3./admin_count
+4./admin_send_one
 """
 
 
@@ -63,6 +65,22 @@ async def send_everyone(message: Message, state: FSMContext) -> None:
     await state.set_state(AdminCommands.waiting_for_command)
 
 
+@router.message(Command("admin_send_one", ignore_case=True))
+async def send_one(message: Message, state: FSMContext) -> None:
+    if not is_user_admin(message):
+        return
+
+    await message.answer("Введите айди (exit для отмены)")
+    await state.set_state(AdminCommands.waiting_for_id)
+
+
+@router.message(AdminCommands.waiting_for_id)
+async def get_target_id(message: Message, state: FSMContext) -> None:
+    target_id = message.text
+    await state.update_data(target_id=target_id)
+    await state.set_state(AdminCommands.waiting_for_command)
+
+
 @router.message(AdminCommands.waiting_for_command)
 async def send_message(message: Message, state: FSMContext, bot: Bot) -> None:
     if message.text == "exit":
@@ -70,8 +88,13 @@ async def send_message(message: Message, state: FSMContext, bot: Bot) -> None:
         await state.clear()
         return
 
-    users = await UserService.get_all_users()
+    data = await state.get_data()
     notify = NotifyUsers(bot)
+    users = data.get("target_id", None)
+
+    if not users:
+        users = await UserService.get_all_users()
+
     await notify.send(users, message.text, bot)  # type:ignore
     await message.answer("Отправлено")
     await state.clear()
