@@ -51,14 +51,14 @@ admin_commands = """
 
 @router.message(Command("admin_commands", ignore_case=True))
 async def admin_commands_list(message: Message) -> None:
-    if not is_user_admin(message):
+    if not await is_user_admin(message):
         return
     await message.answer(admin_commands)
 
 
 @router.message(Command("admin_send_everyone", ignore_case=True))
 async def send_everyone(message: Message, state: FSMContext) -> None:
-    if not is_user_admin(message):
+    if not await is_user_admin(message):
         return
 
     await message.answer("Введите сообщение (exit для отмены)")
@@ -67,7 +67,7 @@ async def send_everyone(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("admin_send_one", ignore_case=True))
 async def send_one(message: Message, state: FSMContext) -> None:
-    if not is_user_admin(message):
+    if not await is_user_admin(message):
         return
 
     await message.answer("Введите айди (exit для отмены)")
@@ -76,7 +76,12 @@ async def send_one(message: Message, state: FSMContext) -> None:
 
 @router.message(AdminCommands.waiting_for_id)
 async def get_target_id(message: Message, state: FSMContext) -> None:
-    target_id = message.text
+    if message.text == 'text':
+        await message.answer('Отменено')
+        await state.clear()
+        return 
+
+    target_id = [int(message.text)]
     await state.update_data(target_id=target_id)
     await state.set_state(AdminCommands.waiting_for_command)
 

@@ -77,7 +77,8 @@ async def recive_feedback_message(message: Message, state: FSMContext, bot: Bot)
         await state.clear()
         return
     if message.text:
-        await bot.send_message(ADMIN_ID, message.text)
+        msg = message.text + f"\n{message.chat.id}"
+        await bot.send_message(ADMIN_ID, msg)
         await message.answer("Отправлено")
         await state.clear()
 

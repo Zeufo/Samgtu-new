@@ -104,7 +104,7 @@ async def changes_monitoring(
 
     await asyncio.sleep(10)
     local_week = int(WeekState.week)
-
+    is_next = False
     while True:
         notify_users = NotifyUsers(bot)
 
@@ -117,24 +117,50 @@ async def changes_monitoring(
                 week: int = WeekState.week
                 time_now = datetime.now(TZ_SAMARA)
 
-                rows = await schedule_serv.get_groups_id(week)  # [(id1, id2, id3)]
+                rows = await schedule_serv.get_groups_id(local_week)  # [(id1, id2, id3)]
                 logger.debug(f"rows is... {rows}")
 
                 if rows:
-                    for row in rows[0]:  # row here is group id
+                    for group in rows:  # row here is group id
+                        row = group[0]
+                        logger.debug(f"checking for {row}")
                         new_schd = await HTTPScheduleParser.parse(http_session, row, local_week)
-                        await date_setter(new_schd, False, time_now)
+                        await date_setter(new_schd, is_next, time_now)
                         new_hash = schedule_hash(new_schd)
 
                         data = await schedule_serv.get_schedule_and_hash(
-                            week, row
+                            local_week, row
+                            
                         )  # [( [{}], 'str')]
 
                         old_schd = data[0][0]  # type:ignore
                         old_hash = data[0][1]  # type:ignore
 
-                        if old_schd is None or old_hash is None:
+                        if old_schd is None or old_hash is None:#Эт кстати очень плохо. в начале года руинит если расписания нет
                             logger.info(f"Schedule is None for  {row} at {week}... why?")
+                            if new_schd:
+                                to_update = {
+                                    "schedule_json": new_schd,
+                                    "hash": new_hash,
+                                    "last_updated": int(time_now.timestamp()),
+                                    "last_updated_formated": time_now.strftime("%d %B %H:%M"),
+
+                                }
+
+                                await schedule_serv.update_schedule_in_monitoring(
+                                    local_week, row, to_update
+                                )
+                                logger.debug("Updated")
+
+                                if NOTIFICATIONS_ENABLED:
+                                    logger.info("NOTIFY {row} group")
+                                    changes =  "Обнаружено изменение в расписании!\nПохоже поставили пары.\nРазраб криворукий, поэтому, пожалуйста, проверьте сами.\n /week\n/nextweek"
+                                    users = await user_service.get_all_users_in_group(row)
+                                    if users and NOTIFICATIONS_ENABLED:
+                                        await notify_users.send(users, changes, bot)
+
+
+
                             continue
 
                         if new_hash == old_hash:
@@ -148,7 +174,7 @@ async def changes_monitoring(
                             continue
 
                         else:
-                            logger.info(f"Schedule changed for {row}... starting alarm")
+                            logger.warning("Schedule changed for {row}... starting alarm")
 
 
                             changes = await schedule_diff_seeker(old_schd, new_schd)
@@ -166,17 +192,19 @@ async def changes_monitoring(
                             )
                             logger.debug("Updated")
 
-                            if users and NOTIFICATIONS_ENABLED:
+                            if NOTIFICATIONS_ENABLED:
                                 users = await user_service.get_all_users_in_group(row)
-                                await notify_users.send(users, changes, bot)
+                                if users and NOTIFICATIONS_ENABLED:
+                                    await notify_users.send(users, changes, bot)
 
                         await asyncio.sleep(10)
 
                 if local_week == WeekState.week:
                     local_week += 1
+                    is_next = True
                 else:
                     local_week = WeekState.week
-
+                    is_next = False
             except asyncio.CancelledError:
                 raise
 

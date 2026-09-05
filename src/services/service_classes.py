@@ -61,18 +61,12 @@ class UserService:
         return result.scalar_one_or_none()
 
     async def get_all_users_in_group(self, group_id: int):
-
         query = select(User.user_id).where(User.group_id == group_id)
         result = await self.session.execute(query)
+        users = tuple(row[0] for row in result.all())
+        logger.debug(f"result is {result}")
 
-        try:
-            result = (result.tuples().all())[0]
-            logger.debug(f"result is {result}")
-
-        except IndexError:
-            result = None
-
-        return result
+        return users or None
 
     @staticmethod
     async def count_all_users() -> int:
