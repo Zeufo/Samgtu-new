@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 from aiogram import Bot, Dispatcher
+from loguru import logger
 from sqlalchemy import text
 
 from config import BOT_TOKEN
@@ -12,7 +13,7 @@ from database import (
 )
 from handlers import get_main_router
 from parse import HTTPFacultyParser, HTTPGroupParser
-from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring, logger
+from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring
 
 
 class ProgrammProcess:
@@ -56,7 +57,9 @@ class ProgrammProcess:
 
             try:
                 task1 = asyncio.create_task(dp.start_polling(bot))
-                task2 = asyncio.create_task(changes_monitoring(httpsession, AsyncSessionLocal, bot))
+                task2 = asyncio.create_task(
+                    changes_monitoring(httpsession, AsyncSessionLocal, bot, False)
+                )
                 await asyncio.gather(task1, task2)
 
             except asyncio.CancelledError:

@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo
 import bs4
 from loguru import logger
 
+from config import spy
+
 TZ_SAMARA = ZoneInfo("Europe/Samara")
 
 
@@ -33,6 +35,7 @@ def faculties_formatter(raw) -> list:
         raise RuntimeError
 
 
+@spy
 async def clean_schedule(response):
     try:
         raw_text = await response.text()

@@ -11,13 +11,13 @@ router = Router(name=__name__)
 
 
 async def make_and_send(message: Message, to_transform):
-    logger.debug("Now in make and send")
+    # logger.debug("Now in make and send")
 
     if to_transform is None:
         await message.answer("Пожалуйста, пройдите регистрацию\n/start")
         return
 
-    logger.debug(f"Now in make and send check passed with to_transform {to_transform}")
+    # logger.debug(f"Now in make and send check passed with to_transform {to_transform}")
     to_send = await message_maker(to_transform)  # type:ignore
 
     if len(to_send) == 0:

@@ -16,7 +16,7 @@ class NotifyUsers(Notifier):
         self.service = service
 
     async def send(self, target_id: tuple[int], text: str, service: aiogram.Bot) -> None:
-        logger.debug(f"target id is... {target_id}")
+        logger.info(f"target id is... {target_id}")
 
         for user in target_id:
             try:
@@ -24,4 +24,4 @@ class NotifyUsers(Notifier):
                 await asyncio.sleep(0.3)
 
             except Exception as e:
-                logger.info(f"problem found! {e}")
+                logger.warning(f"problem found! {e}")

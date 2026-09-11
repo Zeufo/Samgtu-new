@@ -99,7 +99,10 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
 
 
 async def changes_monitoring(
-        http_session: aiohttp.ClientSession, session_maker, bot: aiogram.Bot, NOTIFICATIONS_ENABLED: bool = False
+    http_session: aiohttp.ClientSession,
+    session_maker,
+    bot: aiogram.Bot,
+    NOTIFICATIONS_ENABLED: bool = False,
 ) -> None:
 
     await asyncio.sleep(10)
@@ -130,13 +133,14 @@ async def changes_monitoring(
 
                         data = await schedule_serv.get_schedule_and_hash(
                             local_week, row
-                            
                         )  # [( [{}], 'str')]
 
                         old_schd = data[0][0]  # type:ignore
                         old_hash = data[0][1]  # type:ignore
 
-                        if old_schd is None or old_hash is None:#Эт кстати очень плохо. в начале года руинит если расписания нет
+                        if (
+                            old_schd is None or old_hash is None
+                        ):  # Эт кстати очень плохо. в начале года руинит если расписания нет
                             logger.info(f"Schedule is None for  {row} at {week}... why?")
                             if new_schd:
                                 to_update = {
@@ -144,7 +148,6 @@ async def changes_monitoring(
                                     "hash": new_hash,
                                     "last_updated": int(time_now.timestamp()),
                                     "last_updated_formated": time_now.strftime("%d %B %H:%M"),
-
                                 }
 
                                 await schedule_serv.update_schedule_in_monitoring(
@@ -153,13 +156,11 @@ async def changes_monitoring(
                                 logger.debug("Updated")
 
                                 if NOTIFICATIONS_ENABLED:
-                                    logger.info("NOTIFY {row} group")
-                                    changes =  "Обнаружено изменение в расписании!\nПохоже поставили пары.\nРазраб криворукий, поэтому, пожалуйста, проверьте сами.\n /week\n/nextweek"
+                                    logger.info(f"NOTIFY {row} group")
+                                    changes = "Обнаружено изменение в расписании!\nПохоже поставили пары.\nРазраб криворукий, поэтому, пожалуйста, проверьте сами.\n /week\n/nextweek"
                                     users = await user_service.get_all_users_in_group(row)
                                     if users and NOTIFICATIONS_ENABLED:
                                         await notify_users.send(users, changes, bot)
-
-
 
                             continue
 
@@ -174,11 +175,9 @@ async def changes_monitoring(
                             continue
 
                         else:
-                            logger.warning("Schedule changed for {row}... starting alarm")
-
+                            logger.warning(f"Schedule changed for {row}... starting alarm")
 
                             changes = await schedule_diff_seeker(old_schd, new_schd)
-
 
                             to_update = {
                                 "schedule_json": new_schd,
@@ -194,6 +193,7 @@ async def changes_monitoring(
 
                             if NOTIFICATIONS_ENABLED:
                                 users = await user_service.get_all_users_in_group(row)
+                                logger.info(f"users for notify is {users}")
                                 if users and NOTIFICATIONS_ENABLED:
                                     await notify_users.send(users, changes, bot)
 

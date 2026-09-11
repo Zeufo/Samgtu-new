@@ -5,7 +5,7 @@ import typing
 import aiohttp
 from loguru import logger
 
-from config import ALL_GROUPS_LINK, SCHD_LINK, SITE_LINK
+from config import ALL_GROUPS_LINK, SCHD_LINK, SITE_LINK, spy
 from parse.datacleaner import clean_schedule, faculties_formatter, parse_groups_formatter
 
 
@@ -67,9 +67,16 @@ class HTTPGroupParser(Parser):
         # IT cant be None because we call the func above. so no matter what we always have [] even if there were zero groups
 
 
+class ScheduleFetchError(Exception):
+    """Не удалось получить ответ от сервера. Попробуй позже"""
+
+    pass
+
+
 @typing.final
 class HTTPScheduleParser(Parser):
     @staticmethod
+    @spy
     async def parse(session: aiohttp.ClientSession, grp_id: int | str, weeknum: int) -> list:
         try:
             if isinstance(grp_id, str):
@@ -81,10 +88,14 @@ class HTTPScheduleParser(Parser):
             timeout = aiohttp.ClientTimeout(total=10)
 
             async with session.get(formated_link, timeout=timeout) as response:
+                if response.status != 200:
+                    logger.warning(f"сайт вернул статус {response.status}")
+                    raise ScheduleFetchError(f"сайт вернул статус {response.status}")
+
                 raw: list
                 raw = await clean_schedule(response)
                 return raw
 
         except Exception as e:
             logger.error("Cant parse the schedule...", e)
-            raise RuntimeError
+            raise ScheduleFetchError("Cant parse the schedule...") from e

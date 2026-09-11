@@ -6,7 +6,7 @@ from aiogram.types import Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import TZ_SAMARA, WeekState
+from config import TZ_SAMARA, WeekState, spy
 from parse import HTTPScheduleParser
 
 from .service_classes import ScheduleService, UserService
@@ -31,6 +31,7 @@ icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️
 
 
 async def message_maker(raw: list | dict) -> str:
+
     temp_msg = ""
     temp_msg = ""
 
@@ -90,6 +91,7 @@ async def date_setter(no_date_schedule: list, is_next: bool, today) -> None:
         i = i + 1
 
 
+@spy
 async def schedule_week_service(
     message: Message, session: AsyncSession, http_session: aiohttp.ClientSession, is_next_week=False
 ) -> list | dict | None:
@@ -115,7 +117,7 @@ async def schedule_week_service(
         if schd is None:
             logger.info(f"trying to parse with week {week} amd group {group_id}")
             schd = await HTTPScheduleParser.parse(http_session, group_id, week)
-            logger.debug(f"schedule just after parse... {schd}")
+            # logger.debug(f"schedule just after parse... {schd}")
 
             await date_setter(schd, is_next_week, time_now)
             time_now_seconds = int(time_now.timestamp())

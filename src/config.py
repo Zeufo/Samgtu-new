@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
+from pprint import pp
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -40,9 +42,29 @@ USEFUL_LINKS: dict[str, str] = {
     "https://t.me/Zeufo": (
         "Обратная связь — сообщить об ошибке в расписании или предложить фичу.\nМожно анонимно через /feedback"
     ),
-    "https://t.me/pod_samgtu"  : ("Паблик ТГ с чатами факультетов. Вопросы об обучение и прочие"),
-    
+    "https://t.me/pod_samgtu": ("Паблик ТГ с чатами факультетов. Вопросы об обучение и прочие"),
 }
+
+
+def spy(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        print(f"\n>>> [CALL] {func.__name__}")
+        if args:
+            print("  ARGS:", args)
+        if kwargs:
+            print("  KWARGS:", kwargs)
+
+        try:
+            result = await func(*args, **kwargs)
+            print(f"<<< [{func.__name__}] RETURNED ({type(result)}):")
+            pp(result)
+            return result
+        except Exception as e:
+            print(f"!!! [{func.__name__}] FAILED WITH ERROR: {type(e).__name__}: {e}")
+            raise  # Пробрасываем ошибку дальше, чтобы не ломать логику
+
+    return wrapper
 
 
 try:

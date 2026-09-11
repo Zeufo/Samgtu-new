@@ -1,19 +1,14 @@
-from aiogram import Bot, F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram import Bot, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, ReplyKeyboardRemove
-from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import Message
 
-from config import ADMIN_ID, GITHUB_LINK
+from config import ADMIN_ID
 from services import (
     NotifyUsers,
-    ScheduleService,
     UserService,
     count_active_users,
-    date_setter,
-    welcome,
 )
 
 # /help and /github
@@ -76,14 +71,15 @@ async def send_one(message: Message, state: FSMContext) -> None:
 
 @router.message(AdminCommands.waiting_for_id)
 async def get_target_id(message: Message, state: FSMContext) -> None:
-    if message.text == 'text':
-        await message.answer('Отменено')
+    if message.text == "exit":
+        await message.answer("Отменено")
         await state.clear()
-        return 
+        return
 
-    target_id = [int(message.text)]
-    await state.update_data(target_id=target_id)
-    await state.set_state(AdminCommands.waiting_for_command)
+    if message.text:
+        target_id = [int(message.text)]
+        await state.update_data(target_id=target_id)
+        await state.set_state(AdminCommands.waiting_for_command)
 
 
 @router.message(AdminCommands.waiting_for_command)
