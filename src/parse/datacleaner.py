@@ -35,7 +35,6 @@ def faculties_formatter(raw) -> list:
         raise RuntimeError
 
 
-@spy
 async def clean_schedule(response):
     try:
         raw_text = await response.text()

@@ -144,7 +144,7 @@ async def write_user_service(message: Message, state: FSMContext, session: Async
             logger.info(f"logged succesfully with {user}")
             await message.answer(
                 "Можете пользоваться ботом\n/commands | доступные команды\n\nРежим оповещения об изменениях работает в тестовом режиме.\nСпасибо за понимание!",
-                # reply_markup=schedule_kb.as_markup(resize_keyboard=True),
+                 reply_markup=schedule_kb.as_markup(resize_keyboard=True),
             )
             await state.clear()
             return

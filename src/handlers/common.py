@@ -54,6 +54,7 @@ async def commands(message: Message) -> None:
 
 
 @router.message(F.text.replace(" ", "").upper().in_({"НАСТРОЙКИ"}))
+@router.message(Command("settings", ignore_case=True))
 async def settings(message: Message) -> None:
     await message.answer(
         "Выберите действие", reply_markup=settings_kb.as_markup(resize_keyboard=True)

@@ -42,7 +42,7 @@ async def message_maker(raw: list | dict) -> str:
 
     for day in raw:
         ln = len(day["lessons"])
-        logger.info(f"day is {day}")
+        #logger.info(f"day is {day}")
 
         if ln < 2 and day["lessons"].get(1, {}).get("пара", 0) != "Выходной":
             continue
@@ -91,7 +91,6 @@ async def date_setter(no_date_schedule: list, is_next: bool, today) -> None:
         i = i + 1
 
 
-@spy
 async def schedule_week_service(
     message: Message, session: AsyncSession, http_session: aiohttp.ClientSession, is_next_week=False
 ) -> list | dict | None:

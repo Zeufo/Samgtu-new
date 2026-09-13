@@ -76,7 +76,6 @@ class ScheduleFetchError(Exception):
 @typing.final
 class HTTPScheduleParser(Parser):
     @staticmethod
-    @spy
     async def parse(session: aiohttp.ClientSession, grp_id: int | str, weeknum: int) -> list:
         try:
             if isinstance(grp_id, str):
