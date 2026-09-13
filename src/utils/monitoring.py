@@ -125,9 +125,17 @@ async def changes_monitoring(
 
                 if rows:
                     for group in rows:  # row here is group id
+                        await asyncio.sleep(1)
+
                         row = group[0]
                         logger.debug(f"checking for {row}")
-                        new_schd = await HTTPScheduleParser.parse(http_session, row, local_week)
+
+                        try:
+                            new_schd = await HTTPScheduleParser.parse(http_session, row, local_week)
+                        except Exception as e:
+                            logger.warning(f"Problem with parsing {row} at {local_week}... {e}")
+                            continue
+
                         await date_setter(new_schd, is_next, time_now)
                         new_hash = schedule_hash(new_schd)
 
