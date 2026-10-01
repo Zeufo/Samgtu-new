@@ -124,6 +124,11 @@ class ScheduleService:
         result = await self.session.execute(query)
         return result.all()
 
+    async def get_all_schedules_hash_for_week(self, week: int) -> list:
+        query = select(Schedule.hash).where(Schedule.week_num == week)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
     # to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:
         stmt = insert(Schedule).values(
@@ -153,6 +158,7 @@ class ScheduleService:
 
     # this operation will be use in monitoring service so we take session from init
     async def get_groups_id(self, week: int):  # -> list |Result i guess
+        # Im dumb. sry. its Get all id's for this week
         query = select(Schedule.group_id).where(Schedule.week_num == week)
         result = await self.session.execute(query)
 

@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import typing
 from datetime import datetime
 
 import aiogram
@@ -14,25 +15,21 @@ from services import NotifyUsers, ScheduleService, UserService, date_setter
 
 
 async def week_changes_monitoring(http_session: aiohttp.ClientSession) -> None:
-    while True:
-        try:
-            async with http_session.get(
-                PROXY_LINK,
-                params={"url": SITE_LINK},
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as response:
-                data = await response.text()
+    try:
+        async with http_session.get(
+            PROXY_LINK,
+            params={"url": SITE_LINK},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as response:
+            data = await response.text()
+            find_week = bs4.BeautifulSoup(data, "html.parser")
+            find_week = find_week.find("select", id="schedule_weekttype_select").find(  # type:ignore
+                "option", selected=True
+            )
+            WeekState.week = int(find_week["value"])  # type: ignore
 
-                find_week = bs4.BeautifulSoup(data, "html.parser")
-                find_week = find_week.find("select", id="schedule_weekttype_select").find(  # type:ignore
-                    "option", selected=True
-                )
-                WeekState.week = int(find_week["value"])  # type: ignore
-                await asyncio.sleep(3600)
-
-        except Exception as e:
-            logger.warning("Problem with week monitoring...", e)
-            await asyncio.sleep(100)
+    except Exception as e:
+        logger.warning("Problem with week monitoring...", e)
 
 
 def schedule_hash(schedule: list) -> str:
@@ -41,7 +38,7 @@ def schedule_hash(schedule: list) -> str:
 
 
 async def schedule_diff_seeker(old: list, new: list) -> str:
-    logger.debug(f"old is {old}")
+    # logger.debug(f"old is {old}")
     changes = []
 
     old_by_day = {
@@ -94,8 +91,53 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
                 changes.append("_________________________________\n")
 
     header = "🔔 Изменения в расписании:\n\n"
-    caution = "ВНИМАНИЕ! оповещение работает в тестовом формате.\n Пожалуйста, проверьте изменения на достоверность в личном кабинете"
-    return header + caution + "\n".join(changes)
+    return header + "\n".join(changes)
+
+
+async def schedule_changes_monitoring_cycle(
+    http_session: aiohttp.ClientSession,
+    session_maker,
+    bot: aiogram.Bot,
+    NOTIFICATIONS_ENABLED: bool = False,
+) -> None:
+    while True:
+        await week_changes_monitoring(http_session)
+        week: int = WeekState.week
+
+        async with session_maker() as session:
+            schedule_service = ScheduleService(session)
+
+            all_hashes = await schedule_service.get_all_schedules_hash_for_week(week)
+            user_service = UserService(session)
+
+            groups = await schedule_service.get_groups_id(week)  # groups is ([id, ..., id])
+
+            if not groups or not all_hashes:
+                ...
+
+            for group_number, group in enumerate(groups[0]):
+                try:
+                    new_schd = await HTTPScheduleParser.parse(http_session, group, week)
+                    new_hash = schedule_hash(new_schd)
+
+                    if new_hash != all_hashes[group_number]:
+                        ...
+                    else:
+                        ...
+                except Exception as e:
+                    ...
+
+        await asyncio.sleep(3600)
+
+
+async def seek_changes(
+    http_session: aiohttp.ClientSession, session_maker, week: int, group: int
+) -> typing.Any:
+    try:
+        new_schd = await HTTPScheduleParser.parse(http_session, group, week)
+
+    except Exception as e:
+        ...
 
 
 async def changes_monitoring(
@@ -104,7 +146,6 @@ async def changes_monitoring(
     bot: aiogram.Bot,
     NOTIFICATIONS_ENABLED: bool = False,
 ) -> None:
-
     await asyncio.sleep(10)
     local_week = int(WeekState.week)
     is_next = False
@@ -205,7 +246,7 @@ async def changes_monitoring(
                                 if users and NOTIFICATIONS_ENABLED:
                                     await notify_users.send(users, changes, bot)
 
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(2)
 
                 if local_week == WeekState.week:
                     local_week += 1

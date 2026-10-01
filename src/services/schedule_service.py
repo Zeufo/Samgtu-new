@@ -32,13 +32,19 @@ icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️
 
 async def message_maker(raw: list | dict) -> str:
 
+    if not raw:
+        return ""
+
     temp_msg = ""
     temp_msg = ""
 
     if isinstance(raw, dict):
         raw = [raw]
-    if isinstance(raw[0], list):
+    elif isinstance(raw[0], list):
         raw = raw[0]
+
+    if not raw:
+        return ""
 
     for day in raw:
         ln = len(day["lessons"])
