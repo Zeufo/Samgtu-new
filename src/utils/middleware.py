@@ -16,7 +16,7 @@ class AlchemyMiddleware(BaseMiddleware):
 
 
 class AntiSpamMiddleware(BaseMiddleware):
-    def __init__(self, time_limit: int = 2):
+    def __init__(self, time_limit: int | float = 2):
         self.cache = TTLCache(maxsize=1000, ttl=time_limit)
 
     async def __call__(

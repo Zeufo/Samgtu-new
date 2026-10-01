@@ -48,7 +48,7 @@ class ProgrammProcess:
 
         dp.include_router(get_main_router())
         dp.update.middleware(AlchemyMiddleware(session_factory=AsyncSessionLocal))
-        dp.update.outer_middleware(AntiSpamMiddleware(1))
+        dp.update.outer_middleware(AntiSpamMiddleware(0.3))
 
         logger.info("Starting bot...")
 
