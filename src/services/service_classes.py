@@ -8,8 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import AsyncSessionLocal, Group, Schedule, User
 
 
-# TODO: actually we should add get_users_in_group to the GroupService instead
-# actually not, since UserServ is the class for users table
+@typing.final
 class UserService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -90,6 +89,7 @@ class UserService:
             return tuple(result.all())  # type: ignore
 
 
+@typing.final
 class GroupService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -103,6 +103,7 @@ class GroupService:
         return result.scalar_one_or_none()
 
 
+@typing.final
 class ScheduleService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -124,10 +125,12 @@ class ScheduleService:
         result = await self.session.execute(query)
         return result.all()
 
-    async def get_all_schedules_hash_for_week(self, week: int) -> list:
-        query = select(Schedule.hash).where(Schedule.week_num == week)
+    async def get_every_groups_id_with_hashes_in_one_dict_for_week(self, week: int) -> dict:
+        # returns dict {group_id: hash}
+
+        query = select(Schedule.group_id, Schedule.hash).where(Schedule.week_num == week)
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        return {row[0]: row[1] for row in result.all()}
 
     # to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:

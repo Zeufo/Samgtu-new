@@ -8,6 +8,7 @@ import aiogram
 import aiohttp
 import bs4
 from loguru import logger
+from sqlalchemy.sql.functions import grouping_sets
 
 from config import PROXY_LINK, SITE_LINK, TZ_SAMARA, WeekState
 from parse import HTTPScheduleParser
@@ -94,7 +95,53 @@ async def schedule_diff_seeker(old: list, new: list) -> str:
     return header + "\n".join(changes)
 
 
-async def schedule_changes_monitoring_cycle(
+@typing.final
+class ChangesProccess:
+    def __init__(
+        self,
+        http_session: aiohttp.ClientSession,
+        session_maker,
+        bot: aiogram.Bot,
+        NOTIFICATIONS_ENABLED: bool = False,
+    ) -> None:
+        self.http_session = http_session
+        self.session_maker = session_maker
+        self.bot = bot
+        self.notification_status = NOTIFICATIONS_ENABLED
+
+    @staticmethod
+    async def start_checking() -> None: ...
+
+    async def _find_groups_with_changes_and_not() -> None: ...
+
+
+async def find_groups_with_changes_and_not(
+    http_session: aiohttp.ClientSession,
+    groups_and_hashes: dict,
+    no_changes: list,
+    with_changes: list,
+    time_now: datetime,
+    week: int,
+    is_next: bool,
+) -> None:
+
+    for group in groups_and_hashes.keys():
+        try:
+            await asyncio.sleep(0.1)  # because im not sure where is flood limit
+            new_schd = await HTTPScheduleParser.parse(http_session, group, week)
+            await date_setter(new_schd, is_next, time_now)
+            new_hash = schedule_hash(new_schd)
+
+            if new_hash != groups_and_hashes.get(group):
+                with_changes.append(group)
+            else:
+                no_changes.append(group)
+
+        except Exception as e:
+            logger.warning(f"Problem with parsing {group} at {week}... {e}")
+
+
+async def schedule_changes_pipeline(
     http_session: aiohttp.ClientSession,
     session_maker,
     bot: aiogram.Bot,
@@ -103,41 +150,52 @@ async def schedule_changes_monitoring_cycle(
     while True:
         await week_changes_monitoring(http_session)
         week: int = WeekState.week
+        time_now = datetime.now(TZ_SAMARA)
 
-        async with session_maker() as session:
-            schedule_service = ScheduleService(session)
+        await schedule_changes_monitoring_cycle(
+            http_session, session_maker, bot, week, False, time_now, NOTIFICATIONS_ENABLED
+        )
 
-            all_hashes = await schedule_service.get_all_schedules_hash_for_week(week)
-            user_service = UserService(session)
-
-            groups = await schedule_service.get_groups_id(week)  # groups is ([id, ..., id])
-
-            if not groups or not all_hashes:
-                ...
-
-            for group_number, group in enumerate(groups[0]):
-                try:
-                    new_schd = await HTTPScheduleParser.parse(http_session, group, week)
-                    new_hash = schedule_hash(new_schd)
-
-                    if new_hash != all_hashes[group_number]:
-                        ...
-                    else:
-                        ...
-                except Exception as e:
-                    ...
-
+        await schedule_changes_monitoring_cycle(
+            http_session, session_maker, bot, week + 1, True, time_now, NOTIFICATIONS_ENABLED
+        )
         await asyncio.sleep(3600)
 
 
-async def seek_changes(
-    http_session: aiohttp.ClientSession, session_maker, week: int, group: int
-) -> typing.Any:
-    try:
-        new_schd = await HTTPScheduleParser.parse(http_session, group, week)
+async def schedule_changes_monitoring_cycle(
+    http_session: aiohttp.ClientSession,
+    session_maker,
+    bot: aiogram.Bot,
+    week: int,
+    is_next: bool,
+    time_now: datetime,
+    NOTIFICATIONS_ENABLED: bool = False,
+) -> None:
+    async with session_maker() as session:
+        schedule_service = ScheduleService(session)
+        groups_and_hashes = (
+            await schedule_service.get_every_groups_id_with_hashes_in_one_dict_for_week(week)
+        )
 
-    except Exception as e:
-        ...
+    groups_no_changes = []
+    groups_with_changes = []
+
+    await find_groups_with_changes_and_not(
+        http_session,
+        groups_and_hashes,
+        groups_no_changes,
+        groups_with_changes,
+        time_now,
+        week,
+        is_next,
+    )
+
+    await check_shedule_full_cycle_proccess(
+        http_session, session_maker, bot, time_now, week, False, NOTIFICATIONS_ENABLED
+    )
+    await check_shedule_full_cycle_proccess(
+        http_session, session_maker, bot, time_now, week + 1, True, NOTIFICATIONS_ENABLED
+    )
 
 
 async def changes_monitoring(

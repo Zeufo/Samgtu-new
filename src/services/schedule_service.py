@@ -48,7 +48,7 @@ async def message_maker(raw: list | dict) -> str:
 
     for day in raw:
         ln = len(day["lessons"])
-        #logger.info(f"day is {day}")
+        # logger.info(f"day is {day}")
 
         if ln < 2 and day["lessons"].get(1, {}).get("пара", 0) != "Выходной":
             continue
@@ -85,7 +85,7 @@ async def message_maker(raw: list | dict) -> str:
     return temp_msg
 
 
-async def date_setter(no_date_schedule: list, is_next: bool, today) -> None:
+async def date_setter(no_date_schedule: list, is_next: bool, today: datetime) -> None:
     start_of_week = today - timedelta(days=today.weekday())
     if is_next:
         start_of_week += timedelta(days=7)
