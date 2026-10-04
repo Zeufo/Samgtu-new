@@ -1,7 +1,7 @@
 import typing
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import and_, bindparam, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,14 +116,12 @@ class ScheduleService:
 
         return result.scalar_one_or_none()
 
-    async def get_schedule_and_hash(
-        self, week: int, group: int
-    ) -> list[typing.Any] | None | typing.Any:
-        query = select(Schedule.schedule_json, Schedule.hash).where(
+    async def get_schedule_for_group_for_week(self, week: int, group: int) -> list[typing.Any]:
+        query = select(Schedule.schedule_json).where(
             and_(Schedule.group_id == group, Schedule.week_num == week)
         )
         result = await self.session.execute(query)
-        return result.all()
+        return list(result.all())
 
     async def get_every_groups_id_with_hashes_in_one_dict_for_week(self, week: int) -> dict:
         # returns dict {group_id: hash}
@@ -157,6 +155,52 @@ class ScheduleService:
         )
 
         await self.session.execute(stmt)
+        await self.session.commit()
+
+    async def bulk_update_full_schedule(self, records: list[dict]) -> None:
+        if not records:
+            return
+
+        # Пишем SQL-запрос прямо глазами, без всякой магии:
+        stmt = (
+            update(Schedule)
+            # 1. ГДЕ ИСКАТЬ:
+            .where(
+                Schedule.group_id == bindparam("group_id"),
+                Schedule.week_num == bindparam("week_num"),
+            )
+            # 2. ЧТО ОБНОВЛЯТЬ:
+            .values(
+                schedule_json=bindparam("schedule_json"),
+                hash=bindparam("hash"),
+                last_updated=bindparam("last_updated"),
+                last_updated_formated=bindparam("last_updated_formated"),
+            )
+        )
+
+        # 3. Выполняем для всей пачки словарей сразу:
+        await self.session.execute(stmt, records)
+        await self.session.commit()
+
+    async def bulk_update_only_time(self, records: list[dict]) -> None:
+        if not records:
+            return
+
+        stmt = (
+            update(Schedule)
+            # 1. ГДЕ ИСКАТЬ:
+            .where(
+                Schedule.group_id == bindparam("group_id"),
+                Schedule.week_num == bindparam("week_num"),
+            )
+            # 2. ЧТО ОБНОВЛЯТЬ (только время):
+            .values(
+                last_updated=bindparam("last_updated"),
+                last_updated_formated=bindparam("last_updated_formated"),
+            )
+        )
+
+        await self.session.execute(stmt, records)
         await self.session.commit()
 
     # this operation will be use in monitoring service so we take session from init

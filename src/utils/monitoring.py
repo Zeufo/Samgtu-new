@@ -104,15 +104,90 @@ class ChangesProccess:
         bot: aiogram.Bot,
         NOTIFICATIONS_ENABLED: bool = False,
     ) -> None:
+
         self.http_session = http_session
         self.session_maker = session_maker
         self.bot = bot
         self.notification_status = NOTIFICATIONS_ENABLED
+        self.time_now = datetime.now(TZ_SAMARA)
 
-    @staticmethod
-    async def start_checking() -> None: ...
+    async def start_checking(self) -> None:
+        while True:
+            await week_changes_monitoring(self.http_session)
+            week: int = WeekState.week
+            self.time_now = datetime.now(TZ_SAMARA)
 
-    async def _find_groups_with_changes_and_not() -> None: ...
+            await self._schedule_changes_monitoring_cycle(week)
+            await self._schedule_changes_monitoring_cycle(week + 1, True)
+
+            await asyncio.sleep(1200)
+
+    async def _find_groups_with_changes_and_process(
+        self,
+        groups_and_hashes: dict,
+        to_update_full: list,
+        to_update_time: list,
+        week: int,
+        is_next: bool,
+    ) -> None:
+
+        for group in groups_and_hashes.keys():
+            try:
+                await asyncio.sleep(0.3)  # antiflood
+                new_schd = await HTTPScheduleParser.parse(self.http_session, group, week)
+                await date_setter(new_schd, is_next, self.time_now)
+                new_hash = schedule_hash(new_schd)
+
+                if new_hash != groups_and_hashes.get(group):
+                    to_update_full.append(
+                        {
+                            "group_id": group,
+                            "week_num": week,
+                            "schedule_json": new_schd,
+                            "hash": new_hash,
+                            "last_updated": int(self.time_now.timestamp()),
+                            "last_updated_formated": self.time_now.strftime("%d %B %H:%M"),
+                        }
+                    )
+                else:
+                    to_update_time.append(
+                        {
+                            "group_id": group,
+                            "week_num": week,
+                            "last_updated": int(self.time_now.timestamp()),
+                            "last_updated_formated": self.time_now.strftime("%d %B %H:%M"),
+                        }
+                    )
+
+            except Exception as e:
+                logger.warning(f"Problem with parsing {group} at {week}... {e}")
+
+    async def _schedule_changes_monitoring_cycle(
+        self,
+        week: int,
+        is_next: bool = False,
+    ) -> None:
+        async with self.session_maker() as session:
+            schedule_service = ScheduleService(session)
+            groups_and_hashes = (
+                await schedule_service.get_every_groups_id_with_hashes_in_one_dict_for_week(week)
+            )
+
+        to_update_full = []
+        to_update_time = []
+
+        await self._find_groups_with_changes_and_process(
+            groups_and_hashes, to_update_full, to_update_time, week, is_next
+        )
+
+        async with self.session_maker() as session:
+            schedule_service = ScheduleService(session)
+            await schedule_service.bulk_update_full_schedule(to_update_full)
+            await schedule_service.bulk_update_only_time(to_update_time)
+
+        diff = await schedule_diff_seeker()
+
+    async def _notify(): ...
 
 
 async def find_groups_with_changes_and_not(
@@ -188,13 +263,6 @@ async def schedule_changes_monitoring_cycle(
         time_now,
         week,
         is_next,
-    )
-
-    await check_shedule_full_cycle_proccess(
-        http_session, session_maker, bot, time_now, week, False, NOTIFICATIONS_ENABLED
-    )
-    await check_shedule_full_cycle_proccess(
-        http_session, session_maker, bot, time_now, week + 1, True, NOTIFICATIONS_ENABLED
     )
 
 
