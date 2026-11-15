@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import AsyncSessionLocal, Group, Schedule, User
 
 
+class ScheduleSnapshot(typing.NamedTuple):
+    hash: str
+    schedule: list[typing.Any]
+
+
 @typing.final
 class UserService:
     def __init__(self, session: AsyncSession) -> None:
@@ -123,12 +128,18 @@ class ScheduleService:
         result = await self.session.execute(query)
         return list(result.all())
 
-    async def get_every_groups_id_with_hashes_in_one_dict_for_week(self, week: int) -> dict:
-        # returns dict {group_id: hash}
+    async def get_every_groups_id_with_hashes_and_schedule_for_week(
+        self, week: int
+    ) -> dict[int, ScheduleSnapshot]:
+        # returns dict {group_id: ScheduleSnapshot(hash, schedule)}
 
-        query = select(Schedule.group_id, Schedule.hash).where(Schedule.week_num == week)
+        query = select(Schedule.group_id, Schedule.hash, Schedule.schedule_json).where(
+            Schedule.week_num == week
+        )
         result = await self.session.execute(query)
-        return {row[0]: row[1] for row in result.all()}
+        return {
+            row[0]: ScheduleSnapshot(hash=row[1], schedule=row[2]) for row in result.all()
+        }
 
     # to_insert = (group_id, WeekState.week, schd, "Not now", time_now_seconds, time_now.strftime('%d %B %H:%M'))#type:ignore
     async def insert_schedule(self, session: AsyncSession, to_insert: tuple) -> None:
@@ -157,7 +168,11 @@ class ScheduleService:
         await self.session.execute(stmt)
         await self.session.commit()
 
-    async def bulk_update_full_schedule(self, records: list[dict]) -> None:
+    async def bulk_update_full_schedule(self, records: list[dict], commit: bool = True) -> None:
+        """Обновляет расписания пачкой.
+
+        commit=False нужен, когда транзакцией владеет вызывающий код.
+        """
         if not records:
             return
 
@@ -168,6 +183,9 @@ class ScheduleService:
             .where(
                 Schedule.group_id == bindparam("group_id"),
                 Schedule.week_num == bindparam("week_num"),
+                # Оптимистичная блокировка: не перезаписываем строку,
+                # если её уже обновили, пока мы парсили расписание.
+                Schedule.hash == bindparam("old_hash"),
             )
             # 2. ЧТО ОБНОВЛЯТЬ:
             .values(
@@ -179,10 +197,24 @@ class ScheduleService:
         )
 
         # 3. Выполняем для всей пачки словарей сразу:
-        await self.session.execute(stmt, records)
-        await self.session.commit()
+        result = await self.session.execute(stmt, records)
+        rowcount = getattr(result, "rowcount", -1)
 
-    async def bulk_update_only_time(self, records: list[dict]) -> None:
+        if rowcount not in (-1, len(records)):
+            logger.warning(
+                "bulk_update_full_schedule: ожидали {} строк, обновили {}",
+                len(records),
+                rowcount,
+            )
+
+        if commit:
+            await self.session.commit()
+
+    async def bulk_update_only_time(self, records: list[dict], commit: bool = True) -> None:
+        """Обновляет только время.
+
+        commit=False нужен, когда транзакцией владеет вызывающий код.
+        """
         if not records:
             return
 
@@ -201,7 +233,9 @@ class ScheduleService:
         )
 
         await self.session.execute(stmt, records)
-        await self.session.commit()
+
+        if commit:
+            await self.session.commit()
 
     # this operation will be use in monitoring service so we take session from init
     async def get_groups_id(self, week: int):  # -> list |Result i guess

@@ -65,7 +65,7 @@ def html_week_page():
     return """
     <html>
         <body>
-            <select id="schedule_weekttype_select">
+            <select id="schedule_weektype_select">
                 <option value="1">1 неделя</option>
                 <option value="2" selected="selected">2 неделя</option>
                 <option value="3">3 неделя</option>
