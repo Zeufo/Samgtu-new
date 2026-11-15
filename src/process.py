@@ -13,7 +13,7 @@ from database import (
 )
 from handlers import get_main_router
 from parse import HTTPFacultyParser, HTTPGroupParser
-from utils import AlchemyMiddleware, AntiSpamMiddleware, changes_monitoring
+from utils import AlchemyMiddleware, AntiSpamMiddleware, ChangesProcess
 
 
 class ProgrammProcess:
@@ -55,11 +55,16 @@ class ProgrammProcess:
         async with aiohttp.ClientSession() as httpsession:
             dp["http_session"] = httpsession
 
+            changes_process = ChangesProcess(
+                httpsession,
+                AsyncSessionLocal,
+                bot,
+                notifications_enabled=False,
+            )
+
             try:
                 task1 = asyncio.create_task(dp.start_polling(bot))
-                task2 = asyncio.create_task(
-                    changes_monitoring(httpsession, AsyncSessionLocal, bot, False)
-                )
+                task2 = asyncio.create_task(changes_process.start_checking())
                 await asyncio.gather(task1, task2)
 
             except asyncio.CancelledError:
