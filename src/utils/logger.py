@@ -12,7 +12,7 @@ def setup_logger() -> None:
         "<cyan>{name}:{function}:{line}</cyan> - <level>{message}</level>"
     )
 
-    logger.add(sys.stderr, format=console_format, level="DEBUG", backtrace=True, diagnose=False)
+    logger.add(sys.stderr, format=console_format, level="INFO", backtrace=True, diagnose=False)
 
     file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level: <7} | {name}:{function}:{line} - {message}"
 

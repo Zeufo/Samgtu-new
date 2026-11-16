@@ -176,28 +176,44 @@ class ScheduleService:
         if not records:
             return
 
-        # Пишем SQL-запрос прямо глазами, без всякой магии:
+        # Core-таблица, а не ORM-модель: executemany с произвольным WHERE
+        # не должен уходить в ORM bulk-update по первичному ключу.
+        schedule_table = Schedule.__table__
+
         stmt = (
-            update(Schedule)
+            update(schedule_table)
             # 1. ГДЕ ИСКАТЬ:
             .where(
-                Schedule.group_id == bindparam("group_id"),
-                Schedule.week_num == bindparam("week_num"),
+                schedule_table.c.group_id == bindparam("b_group_id"),
+                schedule_table.c.week_num == bindparam("b_week_num"),
                 # Оптимистичная блокировка: не перезаписываем строку,
                 # если её уже обновили, пока мы парсили расписание.
-                Schedule.hash == bindparam("old_hash"),
+                schedule_table.c.hash == bindparam("b_old_hash"),
             )
             # 2. ЧТО ОБНОВЛЯТЬ:
             .values(
-                schedule_json=bindparam("schedule_json"),
-                hash=bindparam("hash"),
-                last_updated=bindparam("last_updated"),
-                last_updated_formated=bindparam("last_updated_formated"),
+                schedule_json=bindparam("b_schedule_json"),
+                hash=bindparam("b_hash"),
+                last_updated=bindparam("b_last_updated"),
+                last_updated_formated=bindparam("b_last_updated_formated"),
             )
         )
 
+        params = [
+            {
+                "b_group_id": record["group_id"],
+                "b_week_num": record["week_num"],
+                "b_old_hash": record["old_hash"],
+                "b_schedule_json": record["schedule_json"],
+                "b_hash": record["hash"],
+                "b_last_updated": record["last_updated"],
+                "b_last_updated_formated": record["last_updated_formated"],
+            }
+            for record in records
+        ]
+
         # 3. Выполняем для всей пачки словарей сразу:
-        result = await self.session.execute(stmt, records)
+        result = await self.session.execute(stmt, params)
         rowcount = getattr(result, "rowcount", -1)
 
         if rowcount not in (-1, len(records)):
@@ -218,21 +234,33 @@ class ScheduleService:
         if not records:
             return
 
+        schedule_table = Schedule.__table__
+
         stmt = (
-            update(Schedule)
+            update(schedule_table)
             # 1. ГДЕ ИСКАТЬ:
             .where(
-                Schedule.group_id == bindparam("group_id"),
-                Schedule.week_num == bindparam("week_num"),
+                schedule_table.c.group_id == bindparam("b_group_id"),
+                schedule_table.c.week_num == bindparam("b_week_num"),
             )
             # 2. ЧТО ОБНОВЛЯТЬ (только время):
             .values(
-                last_updated=bindparam("last_updated"),
-                last_updated_formated=bindparam("last_updated_formated"),
+                last_updated=bindparam("b_last_updated"),
+                last_updated_formated=bindparam("b_last_updated_formated"),
             )
         )
 
-        await self.session.execute(stmt, records)
+        params = [
+            {
+                "b_group_id": record["group_id"],
+                "b_week_num": record["week_num"],
+                "b_last_updated": record["last_updated"],
+                "b_last_updated_formated": record["last_updated_formated"],
+            }
+            for record in records
+        ]
+
+        await self.session.execute(stmt, params)
 
         if commit:
             await self.session.commit()
