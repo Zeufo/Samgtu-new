@@ -60,9 +60,7 @@ def is_usable_schedule(schedule: typing.Any) -> bool:
         return False
 
     return all(
-        isinstance(day, dict)
-        and day.get("day_name")
-        and isinstance(day.get("lessons"), dict)
+        isinstance(day, dict) and day.get("day_name") and isinstance(day.get("lessons"), dict)
         for day in schedule
     )
 
@@ -158,15 +156,17 @@ class ChangesProcess:
     async def start_checking(self) -> None:
         while True:
             try:
+                logger.info("started check process")
                 await self.run_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Мониторинг упал, продолжаю после паузы")
 
+            logger.info("check processes... 200 OK!")
             await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
 
-    async def run_once(self) -> tuple[list[dict], list[dict]]:
+    async def run_once(self) -> None:
         week_before: int = WeekState.week
         time_before = datetime.now(TZ_SAMARA)
 
@@ -177,7 +177,7 @@ class ChangesProcess:
 
         if not week_ok:
             logger.warning("Не удалось получить неделю с сайта — пропускаю цикл")
-            return [], []
+            return
 
         if not is_week_snapshot_consistent(week_before, week_after, time_before, time_now):
             logger.warning(
@@ -185,27 +185,16 @@ class ChangesProcess:
                 f"{time_before.isocalendar()[:2]} -> {time_now.isocalendar()[:2]}, "
                 f"сайт {week_before} -> {week_after}. Пропускаю цикл."
             )
-            return [], []
+            return
 
         week: int = week_after
         self.time_now = time_now
 
-        to_update_full: list[dict] = []
-        to_update_time: list[dict] = []
-
         for target_week, is_next in ((week, False), (week + 1, True)):
             try:
-                full, time_only = await self._schedule_changes_monitoring_cycle(
-                    target_week, is_next
-                )
+                await self._schedule_changes_monitoring_cycle(target_week, is_next)
             except Exception:
                 logger.exception(f"Ошибка цикла мониторинга для недели {target_week}")
-                continue
-
-            to_update_full.extend(full)
-            to_update_time.extend(time_only)
-
-        return to_update_full, to_update_time
 
     async def _find_groups_with_changes_and_process(
         self,
@@ -292,7 +281,7 @@ class ChangesProcess:
         self,
         week: int,
         is_next: bool = False,
-    ) -> tuple[list[dict], list[dict]]:
+    ) -> None:
         async with self.session_maker() as session:
             schedule_service = ScheduleService(session)
             groups_and_hashes = (
@@ -307,13 +296,11 @@ class ChangesProcess:
             async with self.session_maker() as session:
                 async with session.begin():
                     schedule_service = ScheduleService(session)
-                    await schedule_service.bulk_update_full_schedule(
-                        to_update_full, commit=False
-                    )
+                    await schedule_service.bulk_update_full_schedule(to_update_full, commit=False)
                     await schedule_service.bulk_update_only_time(to_update_time, commit=False)
         except Exception:
             logger.exception(f"Не удалось обновить расписание за неделю {week}")
-            return to_update_full, to_update_time
+            return
 
         if self.notifications_enabled and to_update_full:
             notify_users = NotifyUsers(self.bot)
@@ -338,8 +325,6 @@ class ChangesProcess:
                         await notify_users.send(users, diff, self.bot)
                 except Exception:
                     logger.exception(f"Не удалось отправить уведомление для группы {group_id}")
-
-        return to_update_full, to_update_time
 
 
 async def changes_monitoring(
