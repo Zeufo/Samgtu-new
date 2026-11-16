@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import time
 import typing
 from datetime import datetime
 
@@ -154,16 +155,28 @@ class ChangesProcess:
         self.time_now = datetime.now(TZ_SAMARA)
 
     async def start_checking(self) -> None:
+        logger.info(
+            f"Мониторинг запущен: уведомления "
+            f"{'включены' if self.notifications_enabled else 'отключены'}, "
+            f"интервал {MONITORING_INTERVAL_SECONDS} с"
+        )
+
         while True:
+            logger.info("Мониторинг: начинаю цикл проверки")
+            started = time.monotonic()
+
             try:
-                logger.info("started check process")
                 await self.run_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Мониторинг упал, продолжаю после паузы")
+            finally:
+                logger.info(
+                    f"Мониторинг: цикл занял {time.monotonic() - started:.1f} с, "
+                    f"следующий через {MONITORING_INTERVAL_SECONDS} с"
+                )
 
-            logger.info("check processes... 200 OK!")
             await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
 
     async def run_once(self) -> None:
@@ -190,7 +203,17 @@ class ChangesProcess:
         week: int = week_after
         self.time_now = time_now
 
+        logger.info(
+            f"Снимок недели: сайт={week_after}, "
+            f"время={time_now:%Y-%m-%d %H:%M:%S}"
+        )
+
         for target_week, is_next in ((week, False), (week + 1, True)):
+            logger.info(
+                f"Проверяю неделю {target_week} "
+                f"({'следующая' if is_next else 'текущая'})"
+            )
+
             try:
                 await self._schedule_changes_monitoring_cycle(target_week, is_next)
             except Exception:
@@ -204,6 +227,8 @@ class ChangesProcess:
     ) -> tuple[list[dict], list[dict]]:
         to_update_full: list[dict] = []
         to_update_time: list[dict] = []
+        skipped = 0
+        failed = 0
 
         for group, snapshot in groups_and_hashes.items():
             try:
@@ -215,6 +240,7 @@ class ChangesProcess:
                         f"Пустое или некорректное расписание для группы {group} "
                         f"(неделя {week}), пропускаю"
                     )
+                    skipped += 1
                     continue
 
                 await date_setter(new_schd, is_next, self.time_now)
@@ -229,6 +255,7 @@ class ChangesProcess:
                             f"Повторная проверка вернула пустое расписание для группы {group} "
                             f"(неделя {week}), пропускаю изменение"
                         )
+                        skipped += 1
                         continue
 
                     await date_setter(recheck_schd, is_next, self.time_now)
@@ -246,6 +273,7 @@ class ChangesProcess:
                             f"Два запроса для группы {group} вернули разные расписания — "
                             f"пропускаю до следующего цикла"
                         )
+                        skipped += 1
                         continue
                     else:
                         new_schd = recheck_schd
@@ -273,7 +301,14 @@ class ChangesProcess:
                     )
 
             except Exception:
+                failed += 1
                 logger.exception(f"Problem with parsing {group} at {week}")
+
+        logger.info(
+            f"Неделя {week}: проверено {len(groups_and_hashes)}, "
+            f"изменено {len(to_update_full)}, без изменений {len(to_update_time)}, "
+            f"пропущено {skipped}, ошибок {failed}"
+        )
 
         return to_update_full, to_update_time
 
@@ -287,6 +322,10 @@ class ChangesProcess:
             groups_and_hashes = (
                 await schedule_service.get_every_groups_id_with_hashes_and_schedule_for_week(week)
             )
+
+        if not groups_and_hashes:
+            logger.info(f"Неделя {week}: группы не найдены, пропускаю")
+            return
 
         to_update_full, to_update_time = await self._find_groups_with_changes_and_process(
             groups_and_hashes, week, is_next
@@ -302,8 +341,16 @@ class ChangesProcess:
             logger.exception(f"Не удалось обновить расписание за неделю {week}")
             return
 
+        logger.info(
+            f"Неделя {week}: БД обновлена — полных {len(to_update_full)}, "
+            f"только время {len(to_update_time)}"
+        )
+
         if self.notifications_enabled and to_update_full:
             notify_users = NotifyUsers(self.bot)
+            notified = 0
+            no_users = 0
+            notify_failed = 0
 
             for group_data in to_update_full:
                 group_id = group_data["group_id"]
@@ -312,6 +359,7 @@ class ChangesProcess:
 
                 if not isinstance(old_schedule, list) or not isinstance(new_schedule, list):
                     logger.error(f"Некорректный тип расписания для группы {group_id}")
+                    notify_failed += 1
                     continue
 
                 diff = await schedule_diff_seeker(old_schedule, new_schedule)
@@ -323,8 +371,19 @@ class ChangesProcess:
 
                     if users:
                         await notify_users.send(users, diff, self.bot)
+                        notified += 1
+                    else:
+                        no_users += 1
                 except Exception:
+                    notify_failed += 1
                     logger.exception(f"Не удалось отправить уведомление для группы {group_id}")
+
+            logger.info(
+                f"Неделя {week}: уведомления — отправлено {notified}, "
+                f"без пользователей {no_users}, ошибок {notify_failed}"
+            )
+        elif to_update_full:
+            logger.info(f"Неделя {week}: изменения есть, но уведомления отключены")
 
 
 async def changes_monitoring(
